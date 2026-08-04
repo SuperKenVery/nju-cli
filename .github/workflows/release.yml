@@ -50,6 +50,9 @@ jobs:
           ORANC_USERNAME: ${{ github.actor }}
           ORANC_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           ORANC_SIGNING_KEY: ${{ secrets.ORANC_SIGNING_KEY }}
+          NIX_CONFIG: |
+            extra-substituters = https://oranc.li7g.com/ghcr.io/linyinfeng/oranc-cache https://linyinfeng.cachix.org
+            extra-trusted-public-keys = oranc-linyinfeng-1:rNZCqhG6QTAImDxPI5ydlG5EhLxrwBb11fgpt5zYkVY= linyinfeng.cachix.org-1:sPYQXcNrnCf7Vr7T0YmjXz5dMZ7aOKG3EqLja0xr9MM=
         run: |
           if [ -z "${ORANC_SIGNING_KEY}" ]; then
             echo "ORANC_SIGNING_KEY is not set; skip Nix cache push."
