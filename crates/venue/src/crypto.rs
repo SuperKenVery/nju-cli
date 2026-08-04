@@ -51,7 +51,7 @@ fn hex_encode(bytes: &[u8]) -> String {
 }
 
 fn encrypt_ecb_base64(payload: &str, key: &str) -> Result<String> {
-    if key.as_bytes().len() != 16 {
+    if key.len() != 16 {
         return Err(anyhow!("AES key must be 16 bytes"));
     }
 

@@ -143,6 +143,16 @@
             doCheck = false;
           }
         );
+
+        nju-cli-mcp = craneLib.buildPackage (
+          individualCrateArgs
+          // {
+            pname = "nju-cli-mcp";
+            cargoExtraArgs = "-p nju-cli-mcp";
+            NJU_CLI_BIN = "${nju-cli}/bin/nju-cli";
+            doCheck = false;
+          }
+        );
       in
       {
         checks = {
@@ -227,7 +237,7 @@
         };
 
         packages = {
-          inherit nju-cli;
+          inherit nju-cli nju-cli-mcp;
           default = nju-cli;
         }
         // lib.optionalAttrs pkgs.stdenv.isLinux {
@@ -237,6 +247,9 @@
         apps = {
           nju-cli = flake-utils.lib.mkApp {
             drv = nju-cli;
+          };
+          nju-cli-mcp = flake-utils.lib.mkApp {
+            drv = nju-cli-mcp;
           };
           default = self.apps.${system}.nju-cli;
         };
