@@ -2918,6 +2918,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "nju-cli-mcp"
+version = "1.2.0"
+dependencies = [
+ "anyhow",
+ "my-workspace-hack",
+ "rmcp",
+ "schemars",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "no_std_io2"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"

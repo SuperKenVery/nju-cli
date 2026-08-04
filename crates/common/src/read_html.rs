@@ -8,7 +8,7 @@ use std::sync::LazyLock;
 pub fn html_to_markdown(html: &str) -> Result<String> {
     let result = convert(html, None).context("failed to convert HTML to Markdown")?;
 
-    Ok(result.content.context("No content in converted markdown")?)
+    result.content.context("No content in converted markdown")
 }
 
 /// 将 HTML 文本转换为 Markdown，并使用 `base_url` 补全 Markdown 链接中的相对 URL。
