@@ -5,17 +5,11 @@ edition.workspace = true
 publish = false
 
 [dependencies]
-aes = "0.8"
 anyhow = "1"
-base64 = "0.22"
-cbc = { version = "0.1", features = ["alloc"] }
-ddddocr = { git = "https://github.com/nju-cli/ddddocr.git", branch = "master", default-features = false, features = ["inline-model", "download-binaries"] }
 html-to-markdown-rs = "3.6.0-rc.12"
 my-workspace-hack = { version = "0.1", path = "../my-workspace-hack" }
 regex = "1"
-reqwest = { workspace = true, features = ["cookies"] }
-scraper = "0.24"
+reqwest.workspace = true
 
 [dev-dependencies]
-dotenv = "0.15"
 tokio = { workspace = true, features = ["macros", "rt"] }

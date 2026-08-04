@@ -43,7 +43,7 @@ pub async fn login(command: LoginCommand) -> Result<()> {
                 .build()
                 .context("failed to build NJU auth login client")?;
 
-            common::unified_auth_login(&client, username, password)
+            nju_unified_auth::login(&client, username, password)
                 .await
                 .context("failed to login NJU unified auth")?
         }
@@ -69,7 +69,7 @@ pub async fn authenticated_client() -> Result<reqwest::Client> {
         .build()
         .context("failed to build authenticated reqwest client")?;
 
-    common::unified_auth::ensure_logged_in(&client).await?;
+    nju_unified_auth::ensure_logged_in(&client).await?;
 
     Ok(client)
 }
