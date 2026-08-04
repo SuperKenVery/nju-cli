@@ -6,6 +6,8 @@ use platform_dirs::AppDirs;
 use reqwest::{Url, cookie::Jar};
 use serde::{Deserialize, Serialize};
 
+const AUTH_LOGIN_URL: &str = "https://authserver.nju.edu.cn/authserver/login";
+
 #[derive(Debug, Args)]
 pub struct LoginCommand {
     /// 统一认证用户名。也可使用 NJU_USERNAME 环境变量。
@@ -37,13 +39,7 @@ pub async fn login(command: LoginCommand) -> Result<()> {
                 .password
                 .or_else(|| std::env::var("NJU_PASSWORD").ok())
                 .ok_or_else(|| anyhow!("please provide --password or NJU_PASSWORD"))?;
-            let client = reqwest::Client::builder()
-                .cookie_store(true)
-                .redirect(reqwest::redirect::Policy::none())
-                .build()
-                .context("failed to build NJU auth login client")?;
-
-            common::unified_auth_login(&client, username, password)
+            nju_unified_auth::login(username, password)
                 .await
                 .context("failed to login NJU unified auth")?
         }
@@ -69,9 +65,31 @@ pub async fn authenticated_client() -> Result<reqwest::Client> {
         .build()
         .context("failed to build authenticated reqwest client")?;
 
-    common::unified_auth::ensure_logged_in(&client).await?;
+    ensure_logged_in(&client).await?;
 
     Ok(client)
+}
+
+/// 检查 client 是否持有有效的统一认证登录态。
+async fn ensure_logged_in(client: &reqwest::Client) -> Result<()> {
+    let login_page = client
+        .get(AUTH_LOGIN_URL)
+        .send()
+        .await
+        .context("failed to request NJU auth login page")?
+        .error_for_status()
+        .context("NJU auth login page returned an error status")?
+        .text()
+        .await
+        .context("failed to read NJU auth login page")?;
+
+    if login_page.contains("pwdFromId") {
+        return Err(anyhow!(
+            "not logged in or the login has expired; run `nju-cli login --username USERNAME --password PASSWORD` first"
+        ));
+    }
+
+    Ok(())
 }
 
 fn save_castgc(castgc: String) -> Result<()> {
