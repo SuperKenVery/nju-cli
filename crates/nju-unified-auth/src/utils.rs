@@ -1,12 +1,20 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    fs,
+    path::{Path, PathBuf},
+};
 
 use aes::{
     Aes128,
     cipher::{BlockEncryptMut, KeyIvInit, block_padding::Pkcs7},
 };
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Context, Result, anyhow, ensure};
 use base64::{Engine as _, engine::general_purpose};
+use platform_dirs::AppDirs;
+use rand::Rng;
 use scraper::{Html, Selector};
+
+const LOWER_HEX: &[u8; 16] = b"0123456789abcdef";
 
 /// 从统一认证登录页提取提交登录表单需要的字段。
 pub(crate) fn extract_context(login_page: &str) -> Result<HashMap<String, String>> {
@@ -67,6 +75,86 @@ pub(crate) fn extract_login_error(html: &str) -> Option<String> {
         .filter(|message| !message.is_empty())
 }
 
+/// 生成与 aTrust Web 端相同形状的设备 ID。
+///
+/// Web 端会把 RSA 运算结果的前导零替换为两个零；服务端无法用请求中的信息
+/// 还原该运算，因此这里直接生成等长的小写十六进制字符串。
+pub(crate) fn generate_vpn_device_id() -> String {
+    let mut rng = rand::rng();
+    let mut device_id = String::with_capacity(67);
+    device_id.push_str("00");
+    device_id.push(LOWER_HEX[rng.random_range(1..LOWER_HEX.len())] as char);
+
+    for _ in 0..64 {
+        device_id.push(LOWER_HEX[rng.random_range(0..LOWER_HEX.len())] as char);
+    }
+
+    device_id
+}
+
+/// 生成请求头 `x-sdp-traceid` 使用的 8 位小写十六进制字符串。
+pub(crate) fn generate_sdp_trace_id() -> String {
+    let mut rng = rand::rng();
+    (0..8)
+        .map(|_| LOWER_HEX[rng.random_range(0..LOWER_HEX.len())] as char)
+        .collect()
+}
+
+/// 读取已有的 aTrust Web 设备 ID；不存在时生成、保存并返回。
+pub(crate) fn get_or_create_vpn_device_id() -> Result<String> {
+    let path = vpn_device_id_path()?;
+    get_or_create_vpn_device_id_at(&path)
+}
+
+fn get_or_create_vpn_device_id_at(path: &Path) -> Result<String> {
+    if let Some(device_id) = load_vpn_device_id_from(path)? {
+        return Ok(device_id);
+    }
+
+    let device_id = generate_vpn_device_id();
+    save_vpn_device_id_to(path, &device_id)?;
+    Ok(device_id)
+}
+
+fn save_vpn_device_id_to(path: &Path, device_id: &str) -> Result<()> {
+    ensure!(
+        is_valid_vpn_device_id(device_id),
+        "refusing to save an invalid aTrust VPN device ID"
+    );
+
+    let parent = path
+        .parent()
+        .context("aTrust VPN device ID path has no parent directory")?;
+    fs::create_dir_all(parent).with_context(|| format!("failed to create {}", parent.display()))?;
+    fs::write(path, device_id)
+        .with_context(|| format!("failed to write aTrust VPN device ID to {}", path.display()))
+}
+
+fn vpn_device_id_path() -> Result<PathBuf> {
+    let app_dirs = AppDirs::new(Some("nju-cli"), true)
+        .context("failed to resolve application data directory")?;
+    Ok(app_dirs.data_dir.join("auth").join("vpn-device-id"))
+}
+
+fn load_vpn_device_id_from(path: &Path) -> Result<Option<String>> {
+    let saved = match fs::read_to_string(path) {
+        Ok(saved) => saved,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(error).with_context(|| {
+                format!(
+                    "failed to read saved aTrust VPN device ID from {}",
+                    path.display()
+                )
+            });
+        }
+    };
+    let device_id = saved.trim();
+
+    Ok(Some(device_id.to_string()))
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -97,4 +185,20 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn generates_browser_shaped_vpn_identifiers() {
+        for _ in 0..100 {
+            assert!(is_valid_vpn_device_id(&generate_vpn_device_id()));
+        }
+
+        let trace_id = generate_sdp_trace_id();
+        assert_eq!(trace_id.len(), 8);
+        assert!(
+            trace_id
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        );
+    }
+
 }

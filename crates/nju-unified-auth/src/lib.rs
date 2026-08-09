@@ -8,3 +8,4 @@ mod utils;
 mod vpn;
 
 pub use login::login;
+pub use vpn::login_to_vpn;

@@ -4,7 +4,7 @@
 [
   {
     "label": "Login to VPN",
-    "command": "cargo test --package nju-unified-auth --lib -- vpn::test::test_vpn_login --exact --nocapture --include-ignored",
+    "command": "cargo test --package nju-unified-auth --test login_vpn -- test_vpn_login --exact --nocapture --include-ignored",
     //"args": [],
     // Env overrides for the command, will be appended to the terminal's environment from the settings.
     "env": { "RUST_LOG": "nju_unified_auth=debug" },

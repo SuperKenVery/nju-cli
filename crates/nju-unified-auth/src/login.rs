@@ -2,10 +2,11 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result, anyhow};
 use reqwest::{
-    Client, Response,
-    header::{self, HeaderMap, HeaderValue},
+    Certificate, Client, Proxy, Response, header::{self, HeaderMap, HeaderValue},
 };
 use reqwest_cookie_store::CookieStoreMutex;
+use std::fs::File;
+use std::io::Read;
 
 use crate::{captcha::verify_slider_captcha, request, utils};
 
@@ -46,7 +47,7 @@ pub fn build_login_client() -> Result<Client> {
     build_login_client_with_cookie_store().map(|(client, _)| client)
 }
 
-fn build_login_client_with_cookie_store() -> Result<(Client, Arc<CookieStoreMutex>)> {
+pub fn build_login_client_with_cookie_store() -> Result<(Client, Arc<CookieStoreMutex>)> {
     let mut headers = HeaderMap::new();
     headers.insert(header::USER_AGENT, HeaderValue::from_static(USER_AGENT));
     headers.insert(
@@ -55,17 +56,20 @@ fn build_login_client_with_cookie_store() -> Result<(Client, Arc<CookieStoreMute
     );
     headers.insert(header::REFERER, HeaderValue::from_static(LOGIN_URL));
 
+    // TODO!
+    #[cfg(not(debug_assertions))]
+    compile_error!("Remove root CA configs in release build!");
+
+    let mut cert_buf = vec![];
+    File::open("/home/ken/Downloads/whistle root ca.pem")?.read_to_end(&mut cert_buf)?;
+
     let cookie_provider = Arc::new(CookieStoreMutex::default());
     let client = Client::builder()
         .cookie_provider(cookie_provider.clone())
-        .redirect(reqwest::redirect::Policy::custom(|attempt| {
-            if attempt.url().host_str() == Some("authserver.nju.edu.cn") {
-                attempt.stop()
-            } else {
-                attempt.follow()
-            }
-        }))
+        // .redirect(reqwest::redirect::Policy::default())
         .default_headers(headers)
+        .add_root_certificate(Certificate::from_pem(&cert_buf)?)
+        .proxy(Proxy::all("http://localhost:8899")?)
         .build()
         .context("failed to build NJU auth login client")?;
 

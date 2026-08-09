@@ -1940,6 +1940,7 @@ dependencies = [
  "cbc",
  "ddddocr-tract",
  "image",
+ "platform-dirs",
  "rand 0.9.4",
  "reqwest",
  "reqwest_cookie_store",
