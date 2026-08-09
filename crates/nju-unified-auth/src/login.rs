@@ -1,8 +1,11 @@
+use std::sync::Arc;
+
 use anyhow::{Context, Result, anyhow};
 use reqwest::{
     Client, Response,
     header::{self, HeaderMap, HeaderValue},
 };
+use reqwest_cookie_store::CookieStoreMutex;
 
 use crate::{captcha::verify_slider_captcha, request, utils};
 
@@ -14,15 +17,36 @@ const USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleW
 /// 登录流程会使用内部 client 复用 cookie 并禁用自动重定向，以便从登录响应中读取
 /// CASTGC。滑块验证码会自动识别，并在识别失败时更换验证码重试。
 pub async fn login(username: impl Into<String>, password: impl AsRef<str>) -> Result<String> {
-    let client = build_login_client()?;
+    let (_logged_in_client, cookie_store) = build_logged_in_client(username, password).await?;
+    let cookie_store = cookie_store
+        .lock()
+        .map_err(|_| anyhow!("NJU auth cookie store lock is poisoned"))?;
+
+    cookie_store
+        .get("authserver.nju.edu.cn", "/authserver", "CASTGC")
+        .map(|cookie| cookie.value().to_string())
+        .context("CASTGC was not found in the cookie store")
+}
+
+pub async fn build_logged_in_client(
+    username: impl Into<String>,
+    password: impl AsRef<str>,
+) -> Result<(Client, Arc<CookieStoreMutex>)> {
+    let (client, cookie_store) = build_login_client_with_cookie_store()?;
     let login_page = request_login_page(&client).await?;
     let context = utils::extract_context(&login_page)?;
 
     verify_slider_captcha(&client).await?;
-    submit_login(&client, context, username.into(), password.as_ref()).await
+    submit_login(&client, context, username.into(), password.as_ref()).await?;
+
+    Ok((client, cookie_store))
 }
 
-fn build_login_client() -> Result<Client> {
+pub fn build_login_client() -> Result<Client> {
+    build_login_client_with_cookie_store().map(|(client, _)| client)
+}
+
+fn build_login_client_with_cookie_store() -> Result<(Client, Arc<CookieStoreMutex>)> {
     let mut headers = HeaderMap::new();
     headers.insert(header::USER_AGENT, HeaderValue::from_static(USER_AGENT));
     headers.insert(
@@ -31,12 +55,21 @@ fn build_login_client() -> Result<Client> {
     );
     headers.insert(header::REFERER, HeaderValue::from_static(LOGIN_URL));
 
-    Client::builder()
-        .cookie_store(true)
-        .redirect(reqwest::redirect::Policy::none())
+    let cookie_provider = Arc::new(CookieStoreMutex::default());
+    let client = Client::builder()
+        .cookie_provider(cookie_provider.clone())
+        .redirect(reqwest::redirect::Policy::custom(|attempt| {
+            if attempt.url().host_str() == Some("authserver.nju.edu.cn") {
+                attempt.stop()
+            } else {
+                attempt.follow()
+            }
+        }))
         .default_headers(headers)
         .build()
-        .context("failed to build NJU auth login client")
+        .context("failed to build NJU auth login client")?;
+
+    Ok((client, cookie_provider))
 }
 
 async fn request_login_page(client: &Client) -> Result<String> {
