@@ -1940,7 +1940,6 @@ dependencies = [
  "cbc",
  "ddddocr-tract",
  "image",
- "platform-dirs",
  "rand 0.9.4",
  "reqwest",
  "reqwest_cookie_store",
@@ -1950,6 +1949,20 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "nju-web-vpn"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cookie_store",
+ "rand 0.9.4",
+ "reqwest",
+ "reqwest_cookie_store",
+ "serde",
+ "serde_json",
+ "tracing",
 ]
 
 [[package]]

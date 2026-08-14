@@ -2,11 +2,10 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result, anyhow};
 use reqwest::{
-    Certificate, Client, Proxy, Response, header::{self, HeaderMap, HeaderValue},
+    Client, Response,
+    header::{self, HeaderMap, HeaderValue},
 };
 use reqwest_cookie_store::CookieStoreMutex;
-use std::fs::File;
-use std::io::Read;
 
 use crate::{captcha::verify_slider_captcha, request, utils};
 
@@ -29,7 +28,7 @@ pub async fn login(username: impl Into<String>, password: impl AsRef<str>) -> Re
         .context("CASTGC was not found in the cookie store")
 }
 
-pub async fn build_logged_in_client(
+async fn build_logged_in_client(
     username: impl Into<String>,
     password: impl AsRef<str>,
 ) -> Result<(Client, Arc<CookieStoreMutex>)> {
@@ -43,11 +42,7 @@ pub async fn build_logged_in_client(
     Ok((client, cookie_store))
 }
 
-pub fn build_login_client() -> Result<Client> {
-    build_login_client_with_cookie_store().map(|(client, _)| client)
-}
-
-pub fn build_login_client_with_cookie_store() -> Result<(Client, Arc<CookieStoreMutex>)> {
+fn build_login_client_with_cookie_store() -> Result<(Client, Arc<CookieStoreMutex>)> {
     let mut headers = HeaderMap::new();
     headers.insert(header::USER_AGENT, HeaderValue::from_static(USER_AGENT));
     headers.insert(
@@ -56,20 +51,10 @@ pub fn build_login_client_with_cookie_store() -> Result<(Client, Arc<CookieStore
     );
     headers.insert(header::REFERER, HeaderValue::from_static(LOGIN_URL));
 
-    // TODO!
-    #[cfg(not(debug_assertions))]
-    compile_error!("Remove root CA configs in release build!");
-
-    let mut cert_buf = vec![];
-    File::open("/home/ken/Downloads/whistle root ca.pem")?.read_to_end(&mut cert_buf)?;
-
     let cookie_provider = Arc::new(CookieStoreMutex::default());
     let client = Client::builder()
         .cookie_provider(cookie_provider.clone())
-        // .redirect(reqwest::redirect::Policy::default())
         .default_headers(headers)
-        .add_root_certificate(Certificate::from_pem(&cert_buf)?)
-        .proxy(Proxy::all("http://localhost:8899")?)
         .build()
         .context("failed to build NJU auth login client")?;
 

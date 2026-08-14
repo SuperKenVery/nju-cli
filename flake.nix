@@ -92,6 +92,41 @@
           doCheck = false;
         };
 
+        njuUnifiedAuthCrate = craneLib.crateNameFromCargoToml {
+          cargoToml = ./crates/nju-unified-auth/Cargo.toml;
+        };
+        njuWebVpnCrate = craneLib.crateNameFromCargoToml {
+          cargoToml = ./crates/nju-web-vpn/Cargo.toml;
+        };
+
+        njuUnifiedAuthArgs = commonArgs // {
+          pname = "nju-unified-auth";
+          inherit (njuUnifiedAuthCrate) version;
+          cargoExtraArgs = "-p nju-unified-auth";
+        };
+        njuWebVpnArgs = commonArgs // {
+          pname = "nju-web-vpn";
+          inherit (njuWebVpnCrate) version;
+          cargoExtraArgs = "-p nju-web-vpn";
+        };
+
+        njuUnifiedAuthArtifacts = craneLib.buildDepsOnly njuUnifiedAuthArgs;
+        njuWebVpnArtifacts = craneLib.buildDepsOnly njuWebVpnArgs;
+
+        nju-unified-auth = craneLib.cargoBuild (
+          njuUnifiedAuthArgs
+          // {
+            cargoArtifacts = njuUnifiedAuthArtifacts;
+          }
+        );
+
+        nju-web-vpn = craneLib.cargoBuild (
+          njuWebVpnArgs
+          // {
+            cargoArtifacts = njuWebVpnArtifacts;
+          }
+        );
+
         nju-cli = craneLib.buildPackage (
           individualCrateArgs
           // {
@@ -147,7 +182,7 @@
       {
         checks = {
           # Build the crates as part of `nix flake check` for convenience
-          inherit nju-cli;
+          inherit nju-cli nju-unified-auth nju-web-vpn;
 
           # Run clippy (and deny all warnings) on the workspace source,
           # again, reusing the dependency artifacts from above.
@@ -227,7 +262,7 @@
         };
 
         packages = {
-          inherit nju-cli;
+          inherit nju-cli nju-unified-auth nju-web-vpn;
           default = nju-cli;
         }
         // lib.optionalAttrs pkgs.stdenv.isLinux {

@@ -18,7 +18,6 @@ base64 = "0.22"
 cbc = { version = "0.1", features = ["alloc"] }
 ddddocr = { package = "ddddocr-tract", version = "0.1", default-features = false }
 image = "0.25"
-platform-dirs = "0.3"
 rand = "0.9"
 reqwest = { workspace = true, features = ["cookies", "json"] }
 reqwest_cookie_store = "0.9.0"
