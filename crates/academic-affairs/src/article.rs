@@ -116,10 +116,10 @@ struct ArticleQuery<'a> {
 /// `page_size` 对应请求中的 `rows`，即一页返回的公告数量。该接口不需要额外
 /// header 或 cookie；调用方传入的 `client` 可复用已有 reqwest session。
 pub async fn get_announcements(
-    client: &reqwest::Client,
+    client: &common::Client,
     page_index: u64,
     page_size: u64,
-) -> reqwest::Result<AnnouncementPage> {
+) -> Result<AnnouncementPage> {
     get_articles_by_column_id(
         client,
         ANNOUNCEMENTS_COLUMN_ID,
@@ -132,21 +132,21 @@ pub async fn get_announcements(
 
 /// 获取教务网指定栏目的一页文章列表。
 pub async fn get_column_articles(
-    client: &reqwest::Client,
+    client: &common::Client,
     column: ArticleColumn,
     page_index: u64,
     page_size: u64,
-) -> reqwest::Result<ArticlePage> {
+) -> Result<ArticlePage> {
     get_column_articles_by_id(client, column.column_id(), page_index, page_size).await
 }
 
 /// 获取教务网指定栏目 ID 的一页文章列表。
 pub async fn get_column_articles_by_id(
-    client: &reqwest::Client,
+    client: &common::Client,
     column_id: &str,
     page_index: u64,
     page_size: u64,
-) -> reqwest::Result<ArticlePage> {
+) -> Result<ArticlePage> {
     get_articles_by_column_id(
         client,
         column_id,
@@ -158,7 +158,7 @@ pub async fn get_column_articles_by_id(
 }
 
 /// 获取教务网「机构设置」下属机构列表。
-pub async fn get_institutions(client: &reqwest::Client) -> Result<Vec<Institution>> {
+pub async fn get_institutions(client: &common::Client) -> Result<Vec<Institution>> {
     let response = client
         .get(INSTITUTIONS_URL)
         .send()
@@ -177,10 +177,10 @@ pub async fn get_institutions(client: &reqwest::Client) -> Result<Vec<Institutio
 
 /// 获取教务网指定栏目下所有文章。
 pub async fn list_all_column_articles(
-    client: &reqwest::Client,
+    client: &common::Client,
     column: ArticleColumn,
     page_size: u64,
-) -> reqwest::Result<Vec<Article>> {
+) -> Result<Vec<Article>> {
     let page_size = page_size.max(1);
     let mut page_index = 1;
     let mut articles = Vec::new();
@@ -202,7 +202,7 @@ pub async fn list_all_column_articles(
 }
 
 async fn parse_institution_columns(
-    client: &reqwest::Client,
+    client: &common::Client,
     html: &str,
     page_url: &str,
 ) -> Result<Vec<Institution>> {
@@ -259,13 +259,13 @@ fn institution_column_id(href: &str) -> Option<u64> {
 }
 
 async fn get_articles_by_column_id(
-    client: &reqwest::Client,
+    client: &common::Client,
     column_id: &str,
     page_index: u64,
     page_size: u64,
     return_infos: &str,
-) -> reqwest::Result<ArticlePage> {
-    client
+) -> Result<ArticlePage> {
+    Ok(client
         .post(ARTICLES_URL)
         .form(&ArticleQuery {
             site_id: SITE_ID,
@@ -279,11 +279,11 @@ async fn get_articles_by_column_id(
         .await?
         .error_for_status()?
         .json()
-        .await
+        .await?)
 }
 
 /// 读取公告页面，并转换为 Markdown。
-pub async fn read_announcement(client: &reqwest::Client, url: &str) -> Result<String> {
+pub async fn read_announcement(client: &common::Client, url: &str) -> Result<String> {
     read_article(client, url).await
 }
 
@@ -291,7 +291,7 @@ pub async fn read_announcement(client: &reqwest::Client, url: &str) -> Result<St
 ///
 /// `url` 可以是栏目列表返回的相对链接或完整链接。Markdown 中的相对链接会基于
 /// 最终页面地址补全为绝对链接。
-pub async fn read_article(client: &reqwest::Client, url: &str) -> Result<String> {
+pub async fn read_article(client: &common::Client, url: &str) -> Result<String> {
     let url = reqwest::Url::parse(SITE_BASE_URL)
         .context("invalid academic affairs site base URL")?
         .join(url)

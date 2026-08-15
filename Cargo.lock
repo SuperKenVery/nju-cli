@@ -481,6 +481,8 @@ dependencies = [
  "itsc",
  "my-workspace-hack",
  "nju-unified-auth",
+ "nju-web-vpn",
+ "percent-encoding",
  "platform-dirs",
  "reqwest",
  "sanitize-filename",
@@ -513,6 +515,7 @@ dependencies = [
  "my-workspace-hack",
  "regex",
  "reqwest",
+ "reqwest-middleware",
  "tokio",
 ]
 
@@ -845,6 +848,7 @@ name = "ehall"
 version = "1.2.0"
 dependencies = [
  "anyhow",
+ "common",
  "reqwest",
  "serde",
  "serde_json",
@@ -1956,9 +1960,12 @@ name = "nju-web-vpn"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "cookie_store",
+ "http",
  "rand 0.9.4",
  "reqwest",
+ "reqwest-middleware",
  "reqwest_cookie_store",
  "serde",
  "serde_json",
@@ -2786,6 +2793,21 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+]
+
+[[package]]
+name = "reqwest-middleware"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57f17d28a6e6acfe1733fe24bcd30774d13bffa4b8a22535b4c8c98423088d4e"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "http",
+ "reqwest",
+ "serde",
+ "thiserror 1.0.69",
+ "tower-service",
 ]
 
 [[package]]
@@ -3940,6 +3962,7 @@ dependencies = [
  "anyhow",
  "base64",
  "cbc",
+ "common",
  "md5",
  "reqwest",
  "serde",

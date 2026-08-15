@@ -24,7 +24,7 @@ pub fn default_role_id() -> &'static str {
 }
 
 /// 使用统一认证态初始化「本-课表查询」ehallapp 会话，并设置应用角色。
-pub async fn prepare_session(client: &reqwest::Client, role_id: &str) -> Result<()> {
+pub async fn prepare_session(client: &common::Client, role_id: &str) -> Result<()> {
     client
         .get(APP_SHOW_URL)
         .query(&[("appId", APP_ID)])
@@ -164,7 +164,7 @@ struct EhallEnvelope<T> {
     code: String,
 }
 
-pub async fn get_current_term(client: &reqwest::Client) -> Result<CurrentTerm> {
+pub async fn get_current_term(client: &common::Client) -> Result<CurrentTerm> {
     let page: EhallPage<CurrentTerm> =
         post_page(client, CURRENT_TERM_URL, &[], CURRENT_TERM_ACTION).await?;
 
@@ -175,7 +175,7 @@ pub async fn get_current_term(client: &reqwest::Client) -> Result<CurrentTerm> {
 }
 
 pub async fn list_course_schedules(
-    client: &reqwest::Client,
+    client: &common::Client,
     options: &CourseScheduleListOptions,
 ) -> Result<EhallPage<CourseSchedule>> {
     let page_number = options.page_number.max(1);
@@ -209,7 +209,7 @@ pub async fn list_course_schedules(
 }
 
 pub async fn list_all_course_schedules(
-    client: &reqwest::Client,
+    client: &common::Client,
     options: &CourseScheduleListOptions,
 ) -> Result<Vec<CourseSchedule>> {
     let mut page_options = options.clone();
@@ -301,7 +301,7 @@ fn uses_top_level_param(name: &str) -> bool {
 }
 
 async fn post_page<T>(
-    client: &reqwest::Client,
+    client: &common::Client,
     url: &str,
     form: &[(String, String)],
     action: &str,

@@ -198,7 +198,7 @@ struct CachedArticle {
     publish_time: String,
 }
 
-pub async fn handle(command: AcademicAffairsCommand, client: &reqwest::Client) -> Result<()> {
+pub async fn handle(command: AcademicAffairsCommand, client: &common::Client) -> Result<()> {
     match command {
         AcademicAffairsCommand::Calendar => handle_calendar(client).await?,
         AcademicAffairsCommand::Downloads { command } => {
@@ -230,7 +230,7 @@ pub async fn handle(command: AcademicAffairsCommand, client: &reqwest::Client) -
     Ok(())
 }
 
-async fn handle_calendar(client: &reqwest::Client) -> Result<()> {
+async fn handle_calendar(client: &common::Client) -> Result<()> {
     let calendar = academic_affairs::get_calendar(client)
         .await
         .context("failed to get academic calendar")?;
@@ -249,10 +249,7 @@ async fn handle_calendar(client: &reqwest::Client) -> Result<()> {
     Ok(())
 }
 
-async fn handle_notifications(
-    client: &reqwest::Client,
-    command: NotificationCommand,
-) -> Result<()> {
+async fn handle_notifications(client: &common::Client, command: NotificationCommand) -> Result<()> {
     match command {
         NotificationCommand::List { page, page_size } => {
             let page = academic_affairs::get_announcements(client, page, page_size)
@@ -302,7 +299,7 @@ async fn handle_notifications(
 }
 
 async fn handle_article_collection(
-    client: &reqwest::Client,
+    client: &common::Client,
     column: ArticleColumn,
     command: ArticleCollectionCommand,
 ) -> Result<()> {
@@ -352,10 +349,7 @@ async fn handle_article_collection(
     Ok(())
 }
 
-async fn handle_download_zone(
-    client: &reqwest::Client,
-    command: DownloadZoneCommand,
-) -> Result<()> {
+async fn handle_download_zone(client: &common::Client, command: DownloadZoneCommand) -> Result<()> {
     match command {
         DownloadZoneCommand::CalendarCatalog { command } => {
             handle_download_resources(client, ArticleColumn::CalendarCatalog, command).await?
@@ -372,7 +366,7 @@ async fn handle_download_zone(
 }
 
 async fn handle_download_resources(
-    client: &reqwest::Client,
+    client: &common::Client,
     column: ArticleColumn,
     command: DownloadResourceCommand,
 ) -> Result<()> {
@@ -413,7 +407,7 @@ async fn handle_download_resources(
     Ok(())
 }
 
-async fn handle_institutions(client: &reqwest::Client, command: InstitutionCommand) -> Result<()> {
+async fn handle_institutions(client: &common::Client, command: InstitutionCommand) -> Result<()> {
     let column = ArticleColumn::Institutions;
 
     match command {
@@ -468,7 +462,7 @@ async fn handle_institutions(client: &reqwest::Client, command: InstitutionComma
     Ok(())
 }
 
-async fn print_department_leaders(client: &reqwest::Client) -> Result<()> {
+async fn print_department_leaders(client: &common::Client) -> Result<()> {
     let article = first_column_article(client, ArticleColumn::DepartmentLeaders)
         .await
         .context("failed to get department leaders page")?;
@@ -482,7 +476,7 @@ async fn print_department_leaders(client: &reqwest::Client) -> Result<()> {
 }
 
 async fn list_articles(
-    client: &reqwest::Client,
+    client: &common::Client,
     column: ArticleColumn,
     page: u64,
     page_size: u64,
@@ -500,7 +494,7 @@ async fn list_articles(
 }
 
 async fn articles_to_download(
-    client: &reqwest::Client,
+    client: &common::Client,
     column: ArticleColumn,
     article_ids: Vec<u64>,
     all: bool,
@@ -538,7 +532,7 @@ async fn articles_to_download(
         .collect()
 }
 
-async fn first_column_article(client: &reqwest::Client, column: ArticleColumn) -> Result<Article> {
+async fn first_column_article(client: &common::Client, column: ArticleColumn) -> Result<Article> {
     academic_affairs::get_column_articles(client, column, 1, 1)
         .await
         .with_context(|| format!("failed to list {}", column.title()))?
@@ -549,7 +543,7 @@ async fn first_column_article(client: &reqwest::Client, column: ArticleColumn) -
 }
 
 async fn download_article(
-    client: &reqwest::Client,
+    client: &common::Client,
     article: &CachedArticle,
     dir: &std::path::Path,
 ) -> Result<()> {
@@ -567,7 +561,7 @@ async fn download_article(
 }
 
 async fn download_resource_files(
-    client: &reqwest::Client,
+    client: &common::Client,
     article: &CachedArticle,
     dir: &std::path::Path,
 ) -> Result<()> {

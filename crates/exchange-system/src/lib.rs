@@ -62,7 +62,7 @@ pub struct Project {
 
 /// 获取交换生系统新闻通知列表。
 pub async fn get_notices(
-    client: &reqwest::Client,
+    client: &common::Client,
     page_index: u64,
     page_size: u64,
 ) -> Result<Page<Notice>> {
@@ -71,7 +71,7 @@ pub async fn get_notices(
 
 /// 获取交换生系统项目列表。
 pub async fn get_projects(
-    client: &reqwest::Client,
+    client: &common::Client,
     page_index: u64,
     page_size: u64,
 ) -> Result<Page<Project>> {
@@ -79,7 +79,7 @@ pub async fn get_projects(
 }
 
 async fn get_page<T: serde::de::DeserializeOwned>(
-    client: &reqwest::Client,
+    client: &common::Client,
     url: &str,
     page_index: u64,
     page_size: u64,
@@ -135,7 +135,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_notices() {
-        let client = reqwest::Client::new();
+        let client = common::ClientBuilder::new(reqwest::Client::new()).build();
         let notices = get_notices(&client, 1, 20).await.unwrap();
 
         assert!(!notices.data.is_empty());

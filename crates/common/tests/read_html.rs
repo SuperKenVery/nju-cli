@@ -1,4 +1,4 @@
-use common::{html_to_markdown, html_to_markdown_with_base_url, read_html_page};
+use common::{ClientBuilder, html_to_markdown, html_to_markdown_with_base_url, read_html_page};
 
 #[test]
 fn converts_html_to_markdown() {
@@ -73,7 +73,7 @@ fn keeps_angle_wrapped_image_urls() {
 
 #[tokio::test]
 async fn jw_page_contains_absolutized_image_url() {
-    let client = reqwest::Client::new();
+    let client = ClientBuilder::new(reqwest::Client::new()).build();
     let markdown = read_html_page(
         &client,
         "https://jw.nju.edu.cn/bd/07/c26263a834823/page.htm",
@@ -89,7 +89,7 @@ async fn jw_page_contains_absolutized_image_url() {
 
 #[tokio::test]
 async fn jw_page_contains_absolutized_pdf_url() {
-    let client = reqwest::Client::new();
+    let client = ClientBuilder::new(reqwest::Client::new()).build();
     let markdown = read_html_page(
         &client,
         "https://jw.nju.edu.cn/b1/37/c26263a831799/page.htm",

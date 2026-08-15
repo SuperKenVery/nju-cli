@@ -1,12 +1,18 @@
-use std::{path::PathBuf, sync::Arc, time::SystemTime};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::SystemTime,
+};
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Context, Result, anyhow, ensure};
 use clap::Args;
+use nju_web_vpn::{LoginOperation, WebVpnMiddleware};
 use platform_dirs::AppDirs;
 use reqwest::{Url, cookie::Jar};
 use serde::{Deserialize, Serialize};
 
 const AUTH_LOGIN_URL: &str = "https://authserver.nju.edu.cn/authserver/login";
+const VPN_ENTRY_URL: &str = "https://ehall.nju.edu.cn/";
 
 #[derive(Debug, Args)]
 pub struct LoginCommand {
@@ -19,6 +25,20 @@ pub struct LoginCommand {
     /// 直接保存已有 CASTGC cookie。
     #[arg(long)]
     castgc: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct VpnLoginCommand {
+    /// 手机收到的短信验证码。首次调用不传该参数以发送验证码。
+    #[arg(long)]
+    sms_code: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ClientMode {
+    Direct,
+    Authenticated,
+    WebVpn,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -51,8 +71,80 @@ pub async fn login(command: LoginCommand) -> Result<()> {
     Ok(())
 }
 
+/// 开始或继续 Web VPN 短信登录。
+pub async fn login_vpn(command: VpnLoginCommand) -> Result<()> {
+    match command.sms_code {
+        None => {
+            let castgc = load_castgc().context(
+                "no unified auth login found; run `nju-cli login` before `nju-cli login-vpn`",
+            )?;
+            let operation = LoginOperation::start(
+                Url::parse(VPN_ENTRY_URL).context("invalid Web VPN entry URL")?,
+                castgc,
+            )
+            .await
+            .context("failed to start Web VPN login")?;
+            save_vpn_operation(&vpn_pending_file()?, &operation)?;
+            println!("SMS verification code sent; rerun `nju-cli login-vpn --sms-code CODE`");
+        }
+        Some(code) => {
+            let pending_path = vpn_pending_file()?;
+            let mut operation = load_vpn_operation(&pending_path).with_context(|| {
+                format!(
+                    "no pending Web VPN login found; run `nju-cli login-vpn` first ({})",
+                    pending_path.display()
+                )
+            })?;
+            operation
+                .submit_sms(code)
+                .await
+                .context("failed to complete Web VPN login")?;
+            save_vpn_operation(&vpn_session_file()?, &operation)?;
+            std::fs::remove_file(&pending_path).with_context(|| {
+                format!(
+                    "Web VPN login succeeded, but failed to remove {}",
+                    pending_path.display()
+                )
+            })?;
+            println!("Web VPN login saved");
+        }
+    }
+
+    Ok(())
+}
+
+/// 按访问方式构建业务请求使用的 client。
+pub async fn get_client(mode: ClientMode) -> Result<common::Client> {
+    let client = match mode {
+        ClientMode::Direct => reqwest::Client::builder()
+            .user_agent("nju-cli")
+            .build()
+            .context("failed to build reqwest client")?,
+        ClientMode::Authenticated => authenticated_client().await?,
+        ClientMode::WebVpn => {
+            let path = vpn_session_file()?;
+            let operation = load_vpn_operation(&path).with_context(|| {
+                format!(
+                    "not logged in to Web VPN; run `nju-cli login-vpn` first ({})",
+                    path.display()
+                )
+            })?;
+            ensure!(
+                operation.sid.is_some(),
+                "Web VPN login is incomplete; run `nju-cli login-vpn` again"
+            );
+
+            return Ok(common::ClientBuilder::new(operation.client)
+                .with(WebVpnMiddleware)
+                .build());
+        }
+    };
+
+    Ok(common::ClientBuilder::new(client).build())
+}
+
 /// 构建带缓存统一认证登陆态的 client，并检查登陆态仍然有效。
-pub async fn authenticated_client() -> Result<reqwest::Client> {
+async fn authenticated_client() -> Result<reqwest::Client> {
     let castgc = load_castgc()?;
     let jar = Arc::new(Jar::default());
     jar.add_cookie_str(
@@ -123,6 +215,26 @@ fn load_castgc() -> Result<String> {
 
 fn auth_cache_file() -> Result<PathBuf> {
     Ok(auth_cache_dir()?.join("auth.json"))
+}
+
+fn vpn_pending_file() -> Result<PathBuf> {
+    Ok(auth_cache_dir()?.join("vpn-login.json"))
+}
+
+fn vpn_session_file() -> Result<PathBuf> {
+    Ok(auth_cache_dir()?.join("vpn-session.json"))
+}
+
+fn save_vpn_operation(path: &Path, operation: &LoginOperation) -> Result<()> {
+    let json = serde_json::to_string_pretty(operation)
+        .context("failed to serialize Web VPN login operation")?;
+    std::fs::write(path, json).with_context(|| format!("failed to write {}", path.display()))
+}
+
+fn load_vpn_operation(path: &Path) -> Result<LoginOperation> {
+    let json = std::fs::read_to_string(path)
+        .with_context(|| format!("failed to read {}", path.display()))?;
+    serde_json::from_str(&json).with_context(|| format!("failed to parse {}", path.display()))
 }
 
 fn auth_cache_dir() -> Result<PathBuf> {

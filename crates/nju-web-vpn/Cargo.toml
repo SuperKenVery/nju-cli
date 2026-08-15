@@ -17,10 +17,13 @@ rustdoc-args = ["--deny", "warnings"]
 
 [dependencies]
 anyhow = "1"
+async-trait = "0.1"
 cookie_store = "0.22"
+http = "1"
 rand = "0.9"
 reqwest = { workspace = true, features = ["cookies", "json"] }
 reqwest_cookie_store = "0.9"
+reqwest-middleware.workspace = true
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tracing = { workspace = true }

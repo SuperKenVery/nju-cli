@@ -102,7 +102,7 @@ pub struct Article {
 }
 
 pub async fn get_articles(
-    client: &reqwest::Client,
+    client: &common::Client,
     section: ArticleSection,
     page_index: u64,
 ) -> Result<ArticlePage> {
@@ -134,7 +134,7 @@ pub async fn get_articles(
 }
 
 pub async fn list_all_articles(
-    client: &reqwest::Client,
+    client: &common::Client,
     section: ArticleSection,
 ) -> Result<Vec<Article>> {
     let mut page_index = 1;
@@ -160,7 +160,7 @@ pub async fn list_all_articles(
     Ok(articles)
 }
 
-pub async fn read_article(client: &reqwest::Client, url: &str) -> Result<String> {
+pub async fn read_article(client: &common::Client, url: &str) -> Result<String> {
     let url = reqwest::Url::parse(SITE_BASE_URL)
         .context("invalid graduate admission site base URL")?
         .join(url)
@@ -181,11 +181,11 @@ pub async fn read_article(client: &reqwest::Client, url: &str) -> Result<String>
     article_html_to_markdown(&html, page_url.as_str())
 }
 
-pub async fn read_column_page(client: &reqwest::Client, section: ArticleSection) -> Result<String> {
+pub async fn read_column_page(client: &common::Client, section: ArticleSection) -> Result<String> {
     read_page(client, &section.list_url()).await
 }
 
-pub async fn read_page(client: &reqwest::Client, url: &str) -> Result<String> {
+pub async fn read_page(client: &common::Client, url: &str) -> Result<String> {
     let response = client
         .get(url)
         .send()

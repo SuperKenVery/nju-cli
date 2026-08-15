@@ -184,7 +184,7 @@ struct CachedArticle {
     publish_time: String,
 }
 
-pub async fn handle(command: ScitCommand, client: &reqwest::Client) -> Result<()> {
+pub async fn handle(command: ScitCommand, client: &common::Client) -> Result<()> {
     match command {
         ScitCommand::Columns => print_columns(),
         ScitCommand::List {
@@ -252,7 +252,7 @@ fn print_columns() {
 }
 
 async fn list_articles(
-    client: &reqwest::Client,
+    client: &common::Client,
     section: scit::ArticleSection,
     page: u64,
     page_size: u64,
@@ -270,7 +270,7 @@ async fn list_articles(
 }
 
 async fn articles_to_download(
-    client: &reqwest::Client,
+    client: &common::Client,
     section: scit::ArticleSection,
     article_ids: Vec<u64>,
     all: bool,
@@ -309,7 +309,7 @@ async fn articles_to_download(
 }
 
 async fn download_article(
-    client: &reqwest::Client,
+    client: &common::Client,
     article: &CachedArticle,
     dir: &std::path::Path,
 ) -> Result<()> {

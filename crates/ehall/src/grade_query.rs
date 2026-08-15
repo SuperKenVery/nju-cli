@@ -37,7 +37,7 @@ pub fn default_role_id() -> &'static str {
 }
 
 /// 使用统一认证态初始化「成绩查询」ehallapp 会话，并设置应用角色。
-pub async fn prepare_session(client: &reqwest::Client, role_id: &str) -> Result<()> {
+pub async fn prepare_session(client: &common::Client, role_id: &str) -> Result<()> {
     client
         .get(APP_SHOW_URL)
         .query(&[("appId", APP_ID)])
@@ -227,7 +227,7 @@ impl From<CodeGradeTerm> for GradeTerm {
     }
 }
 
-pub async fn get_current_term(client: &reqwest::Client) -> Result<GradeTerm> {
+pub async fn get_current_term(client: &common::Client) -> Result<GradeTerm> {
     let page: EhallPage<GradeTerm> =
         post_page(client, CURRENT_TERM_URL, &[], CURRENT_TERM_ACTION).await?;
 
@@ -237,14 +237,14 @@ pub async fn get_current_term(client: &reqwest::Client) -> Result<GradeTerm> {
         .ok_or_else(|| anyhow!("current grade term was not found"))
 }
 
-pub async fn list_recent_terms(client: &reqwest::Client) -> Result<Vec<GradeTerm>> {
+pub async fn list_recent_terms(client: &common::Client) -> Result<Vec<GradeTerm>> {
     let rows: EhallRows<CodeGradeTerm> = get_rows(client, RECENT_TERMS_URL, "code").await?;
 
     Ok(rows.rows.into_iter().map(GradeTerm::from).collect())
 }
 
 pub async fn list_grades(
-    client: &reqwest::Client,
+    client: &common::Client,
     options: &GradeListOptions,
 ) -> Result<EhallPage<Grade>> {
     let page_number = options.page_number.max(1);
@@ -263,7 +263,7 @@ pub async fn list_grades(
 }
 
 pub async fn list_cet_grades(
-    client: &reqwest::Client,
+    client: &common::Client,
     options: &CetGradeListOptions,
 ) -> Result<EhallPage<CetGrade>> {
     let page_number = options.page_number.max(1);
@@ -283,7 +283,7 @@ pub async fn list_cet_grades(
 }
 
 pub async fn list_all_grades(
-    client: &reqwest::Client,
+    client: &common::Client,
     options: &GradeListOptions,
 ) -> Result<Vec<Grade>> {
     let mut page_options = options.clone();
@@ -305,7 +305,7 @@ pub async fn list_all_grades(
 }
 
 pub async fn list_all_cet_grades(
-    client: &reqwest::Client,
+    client: &common::Client,
     options: &CetGradeListOptions,
 ) -> Result<Vec<CetGrade>> {
     let mut page_options = options.clone();
@@ -326,7 +326,7 @@ pub async fn list_all_cet_grades(
     Ok(grades)
 }
 
-async fn resolve_terms(client: &reqwest::Client, terms: &[String]) -> Result<Vec<String>> {
+async fn resolve_terms(client: &common::Client, terms: &[String]) -> Result<Vec<String>> {
     let terms = terms
         .iter()
         .map(|term| term.trim())
@@ -456,7 +456,7 @@ fn cet_grade_query_setting(options: &CetGradeListOptions) -> Vec<Value> {
     settings
 }
 
-async fn get_rows<T>(client: &reqwest::Client, url: &str, action: &str) -> Result<EhallRows<T>>
+async fn get_rows<T>(client: &common::Client, url: &str, action: &str) -> Result<EhallRows<T>>
 where
     T: for<'de> Deserialize<'de>,
 {
@@ -502,7 +502,7 @@ where
 }
 
 async fn post_page<T>(
-    client: &reqwest::Client,
+    client: &common::Client,
     url: &str,
     form: &[(String, String)],
     action: &str,

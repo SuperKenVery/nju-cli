@@ -360,7 +360,7 @@ struct ArticleQuery<'a> {
 }
 
 pub async fn get_articles(
-    client: &reqwest::Client,
+    client: &common::Client,
     section: ArticleSection,
     page_index: u64,
     page_size: u64,
@@ -380,7 +380,7 @@ pub async fn get_articles(
 }
 
 pub async fn list_all_articles(
-    client: &reqwest::Client,
+    client: &common::Client,
     section: ArticleSection,
     page_size: u64,
 ) -> Result<Vec<Article>> {
@@ -404,7 +404,7 @@ pub async fn list_all_articles(
     Ok(articles)
 }
 
-pub async fn read_article(client: &reqwest::Client, url: &str) -> Result<String> {
+pub async fn read_article(client: &common::Client, url: &str) -> Result<String> {
     let url = reqwest::Url::parse(SITE_BASE_URL)
         .context("invalid SCIT site base URL")?
         .join(url)
@@ -426,7 +426,7 @@ pub async fn read_article(client: &reqwest::Client, url: &str) -> Result<String>
     article_html_to_markdown(&html, page_url.as_str())
 }
 
-async fn resolve_column_id(client: &reqwest::Client, section: ArticleSection) -> Result<String> {
+async fn resolve_column_id(client: &common::Client, section: ArticleSection) -> Result<String> {
     if section
         .list_path()
         .bytes()
@@ -454,12 +454,12 @@ async fn resolve_column_id(client: &reqwest::Client, section: ArticleSection) ->
 }
 
 async fn get_articles_by_column_id(
-    client: &reqwest::Client,
+    client: &common::Client,
     column_id: &str,
     page_index: u64,
     page_size: u64,
-) -> reqwest::Result<ArticlePage> {
-    client
+) -> Result<ArticlePage> {
+    Ok(client
         .post(ARTICLES_URL)
         .form(&ArticleQuery {
             site_id: SITE_ID,
@@ -473,7 +473,7 @@ async fn get_articles_by_column_id(
         .await?
         .error_for_status()?
         .json()
-        .await
+        .await?)
 }
 
 fn article_html_to_markdown(html: &str, page_url: &str) -> Result<String> {

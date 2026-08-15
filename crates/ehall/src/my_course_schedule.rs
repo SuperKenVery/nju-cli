@@ -57,11 +57,11 @@ pub fn default_role_id() -> &'static str {
     DEFAULT_ROLE_ID
 }
 
-pub async fn prepare_schedule_session(client: &reqwest::Client, role_id: &str) -> Result<()> {
+pub async fn prepare_schedule_session(client: &common::Client, role_id: &str) -> Result<()> {
     prepare_session(client, SCHEDULE_APP_ID, SCHEDULE_INDEX_URL, "wdkb", role_id).await
 }
 
-pub async fn prepare_exemption_session(client: &reqwest::Client, role_id: &str) -> Result<()> {
+pub async fn prepare_exemption_session(client: &common::Client, role_id: &str) -> Result<()> {
     prepare_session(
         client,
         EXEMPTION_APP_ID,
@@ -73,7 +73,7 @@ pub async fn prepare_exemption_session(client: &reqwest::Client, role_id: &str) 
 }
 
 async fn prepare_session(
-    client: &reqwest::Client,
+    client: &common::Client,
     app_id: &str,
     index_url: &str,
     app_name: &str,
@@ -241,7 +241,7 @@ struct EhallEnvelope<T> {
     code: String,
 }
 
-pub async fn list_terms(client: &reqwest::Client) -> Result<Vec<Term>> {
+pub async fn list_terms(client: &common::Client) -> Result<Vec<Term>> {
     let page: EhallPage<Term> = post_page(
         client,
         TERM_LIST_URL,
@@ -253,7 +253,7 @@ pub async fn list_terms(client: &reqwest::Client) -> Result<Vec<Term>> {
     Ok(page.rows)
 }
 
-pub async fn get_current_term(client: &reqwest::Client) -> Result<Term> {
+pub async fn get_current_term(client: &common::Client) -> Result<Term> {
     let page: EhallPage<Term> =
         post_page(client, CURRENT_TERM_URL, &[], CURRENT_TERM_ACTION).await?;
 
@@ -263,7 +263,7 @@ pub async fn get_current_term(client: &reqwest::Client) -> Result<Term> {
         .ok_or_else(|| anyhow!("current term was not found"))
 }
 
-pub async fn get_student_info(client: &reqwest::Client) -> Result<StudentInfo> {
+pub async fn get_student_info(client: &common::Client) -> Result<StudentInfo> {
     let page: EhallPage<StudentInfo> =
         post_page(client, STUDENT_INFO_URL, &[], STUDENT_INFO_ACTION).await?;
 
@@ -281,7 +281,7 @@ pub struct MyCourseListOptions {
 }
 
 pub async fn list_courses(
-    client: &reqwest::Client,
+    client: &common::Client,
     options: &MyCourseListOptions,
 ) -> Result<EhallPage<MyCourse>> {
     let term = resolve_term(client, options.term.as_deref()).await?;
@@ -301,7 +301,7 @@ pub async fn list_courses(
 }
 
 pub async fn list_all_courses(
-    client: &reqwest::Client,
+    client: &common::Client,
     options: &MyCourseListOptions,
 ) -> Result<Vec<MyCourse>> {
     let mut options = options.clone();
@@ -323,7 +323,7 @@ pub async fn list_all_courses(
 }
 
 pub async fn get_course_detail(
-    client: &reqwest::Client,
+    client: &common::Client,
     term: Option<&str>,
     identifier: &str,
 ) -> Result<CourseDetail> {
@@ -381,7 +381,7 @@ pub async fn get_course_detail(
     })
 }
 
-pub async fn get_exam_notes(client: &reqwest::Client) -> Result<String> {
+pub async fn get_exam_notes(client: &common::Client) -> Result<String> {
     let html = client
         .get(EXAM_NOTES_HTML_URL)
         .send()
@@ -397,7 +397,7 @@ pub async fn get_exam_notes(client: &reqwest::Client) -> Result<String> {
 }
 
 pub async fn list_exemption_applications(
-    client: &reqwest::Client,
+    client: &common::Client,
     term: Option<&str>,
 ) -> Result<Vec<ExemptionApplication>> {
     let student = get_student_info(client).await?;
@@ -432,7 +432,7 @@ pub async fn list_exemption_applications(
 }
 
 pub async fn apply_exemption(
-    client: &reqwest::Client,
+    client: &common::Client,
     term: Option<&str>,
     identifier: &str,
     reason: &str,
@@ -485,7 +485,7 @@ pub async fn apply_exemption(
 }
 
 async fn list_selected_course_for_exemption(
-    client: &reqwest::Client,
+    client: &common::Client,
     teaching_class_id: &str,
     student_id: &str,
     term: &str,
@@ -509,7 +509,7 @@ async fn list_selected_course_for_exemption(
         .ok_or_else(|| anyhow!("selected course {teaching_class_id} was not found"))
 }
 
-async fn ensure_course_can_apply(client: &reqwest::Client, course_id: &str) -> Result<()> {
+async fn ensure_course_can_apply(client: &common::Client, course_id: &str) -> Result<()> {
     let response: Value = client
         .post(EXEMPTION_ALLOWED_URL)
         .form(&[("KCH", course_id)])
@@ -541,7 +541,7 @@ async fn ensure_course_can_apply(client: &reqwest::Client, course_id: &str) -> R
 }
 
 async fn current_workflow_instance(
-    client: &reqwest::Client,
+    client: &common::Client,
     student_id: &str,
     term: &str,
 ) -> Result<String> {
@@ -584,10 +584,7 @@ async fn current_workflow_instance(
         .ok_or_else(|| anyhow!("workflow setting {key} was not found"))
 }
 
-async fn first_workflow_status(
-    client: &reqwest::Client,
-    workflow_instance: &str,
-) -> Result<String> {
+async fn first_workflow_status(client: &common::Client, workflow_instance: &str) -> Result<String> {
     let page: EhallPage<Value> = post_page(
         client,
         FLOW_NEXT_STATUS_URL,
@@ -606,7 +603,7 @@ async fn first_workflow_status(
         .ok_or_else(|| anyhow!("first workflow status was not found"))
 }
 
-async fn resolve_term(client: &reqwest::Client, term: Option<&str>) -> Result<String> {
+async fn resolve_term(client: &common::Client, term: Option<&str>) -> Result<String> {
     match term.map(str::trim).filter(|term| !term.is_empty()) {
         Some(term) => Ok(term.to_string()),
         None => Ok(get_current_term(client).await?.id),
@@ -623,7 +620,7 @@ fn term_query_setting(term: &str) -> Vec<Value> {
 }
 
 async fn post_page<T>(
-    client: &reqwest::Client,
+    client: &common::Client,
     url: &str,
     form: &[(String, String)],
     action: &str,
@@ -655,7 +652,7 @@ where
 }
 
 async fn post_raw_action(
-    client: &reqwest::Client,
+    client: &common::Client,
     url: &str,
     form: &[(String, String)],
     action: &str,

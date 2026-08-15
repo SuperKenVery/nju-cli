@@ -19,7 +19,7 @@ pub struct DownloadFile {
 ///
 /// `url` 可以是列表接口返回的文章页地址，也可以是直接指向附件的相对/绝对 URL。
 pub async fn list_article_download_files(
-    client: &reqwest::Client,
+    client: &common::Client,
     url: &str,
 ) -> Result<Vec<DownloadFile>> {
     let url = reqwest::Url::parse(SITE_BASE_URL)

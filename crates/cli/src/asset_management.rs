@@ -54,7 +54,7 @@ struct CachedArticle {
     publish_date: String,
 }
 
-pub async fn handle(command: AssetManagementCommand, client: &reqwest::Client) -> Result<()> {
+pub async fn handle(command: AssetManagementCommand, client: &common::Client) -> Result<()> {
     match command {
         AssetManagementCommand::Columns => print_columns(),
         AssetManagementCommand::List { section, page, all } => {
@@ -123,7 +123,7 @@ fn print_columns() {
 }
 
 async fn list_articles(
-    client: &reqwest::Client,
+    client: &common::Client,
     section: asset_management::ArticleSection,
     page: u64,
     all: bool,
@@ -140,7 +140,7 @@ async fn list_articles(
 }
 
 async fn articles_to_download(
-    client: &reqwest::Client,
+    client: &common::Client,
     section: asset_management::ArticleSection,
     article_ids: Vec<u64>,
     all: bool,
@@ -178,7 +178,7 @@ async fn articles_to_download(
 }
 
 async fn download_article(
-    client: &reqwest::Client,
+    client: &common::Client,
     article: &CachedArticle,
     dir: &std::path::Path,
 ) -> Result<()> {

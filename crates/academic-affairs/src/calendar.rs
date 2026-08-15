@@ -14,7 +14,7 @@ pub struct Calendar {
 }
 
 /// 获取教务网当前「全学年教学校历」页面中的 PDF 和图片链接。
-pub async fn get_calendar(client: &reqwest::Client) -> Result<Calendar> {
+pub async fn get_calendar(client: &common::Client) -> Result<Calendar> {
     let html = client
         .get(CALENDAR_URL)
         .send()
@@ -149,7 +149,7 @@ mod test {
 
     #[tokio::test]
     async fn test_get_calendar() {
-        let client = reqwest::Client::new();
+        let client = common::ClientBuilder::new(reqwest::Client::new()).build();
         let calendar = get_calendar(&client).await.unwrap();
 
         assert!(!calendar.pdf_urls.is_empty());

@@ -10,6 +10,7 @@ html-to-markdown-rs = "3.6.0-rc.12"
 my-workspace-hack = { version = "0.1", path = "../my-workspace-hack" }
 regex = "1"
 reqwest.workspace = true
+reqwest-middleware.workspace = true
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt"] }
