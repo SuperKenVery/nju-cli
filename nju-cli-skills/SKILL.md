@@ -53,6 +53,15 @@ nju-cli login-vpn
 nju-cli login-vpn --sms-code <验证码>
 ```
 
+检查登录 cookie 是否仍然有效：
+
+```bash
+nju-cli login --test
+nju-cli login-vpn --test
+```
+
+输出 `logged in` 或 `not logged in`。
+
 ## Subcommands
 
 这里的文件路径是相对skill目录（也就是此SKILL.md所在目录）来的

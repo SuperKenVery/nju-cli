@@ -282,6 +282,26 @@
 
           # Additional dev-shell environment variables can be set directly
           # MY_CUSTOM_DEVELOPMENT_VAR = "something else";
+          RUST_LOG = let
+            workspaceLogLevel="debug";
+          in
+            lib.concatStringsSep "," [
+              "info"
+              "academic_affairs=${workspaceLogLevel}"
+              "asset_management=${workspaceLogLevel}"
+              "common=${workspaceLogLevel}"
+              "ehall=${workspaceLogLevel}"
+              "exchange_system=${workspaceLogLevel}"
+              "graduate_admission=${workspaceLogLevel}"
+              "itsc=${workspaceLogLevel}"
+              "my_workspace_hack=${workspaceLogLevel}"
+              "nju_cli=${workspaceLogLevel}"
+              "nju_unified_auth=${workspaceLogLevel}"
+              "nju_web_vpn=${workspaceLogLevel}"
+              "scit=${workspaceLogLevel}"
+              "venue=${workspaceLogLevel}"
+              "youth_league=${workspaceLogLevel}"
+            ];
 
           # Extra inputs can be added here; cargo and rustc are provided by default.
           packages = [

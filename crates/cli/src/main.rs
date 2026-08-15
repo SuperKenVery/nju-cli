@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use tracing_subscriber::EnvFilter;
 
 mod academic_affairs;
 mod asset_management;
@@ -93,6 +94,10 @@ enum Command {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
+
     let cli = Cli::parse();
     let direct_mode = if cli.vpn {
         auth::ClientMode::WebVpn
