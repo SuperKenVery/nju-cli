@@ -57,7 +57,7 @@ struct CachedArticle {
     url: String,
 }
 
-pub async fn handle(command: YouthLeagueCommand, client: &reqwest::Client) -> Result<()> {
+pub async fn handle(command: YouthLeagueCommand, client: &common::Client) -> Result<()> {
     match command {
         YouthLeagueCommand::List { section, page } => {
             let section = youth_league::ArticleSection::from(section);

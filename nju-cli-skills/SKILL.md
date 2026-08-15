@@ -32,6 +32,36 @@ nju-cli view-html <url>
 
 读取公开 HTML 页面并转换为 Markdown。适合需要快速阅读网页正文、链接或图片时使用；页内的相对链接会补全为绝对链接。
 
+```bash
+nju-cli download <url> [-o <文件或目录>]
+```
+
+下载 URL 指向的文件。阅读页面后看到附件链接时使用；配合全局参数 `--vpn` 时，会带上 Web VPN 会话 cookie 下载，因此可以直接下载被改写成 `*.atrust.nju.edu.cn` 的附件链接。默认保存到当前目录，文件名优先取响应头，其次取 URL 路径中的文件名。
+
+需要从校外通过南京大学 Web VPN 访问时，在任意网页命令中添加全局参数 `--vpn`，例如：
+
+```bash
+nju-cli --vpn itsc list services
+```
+
+如果提示未登录：
+
+```bash
+nju-cli login
+nju-cli login-vpn
+# 问用户要验证码
+nju-cli login-vpn --sms-code <验证码>
+```
+
+检查登录 cookie 是否仍然有效：
+
+```bash
+nju-cli login --test
+nju-cli login-vpn --test
+```
+
+输出 `logged in` 或 `not logged in`。
+
 ## Subcommands
 
 这里的文件路径是相对skill目录（也就是此SKILL.md所在目录）来的

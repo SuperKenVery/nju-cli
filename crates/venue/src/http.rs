@@ -1,7 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result, anyhow};
-use reqwest::Client;
 use serde::{Serialize, de::DeserializeOwned};
 use serde_json::Value;
 
@@ -13,12 +12,12 @@ const APP_KEY: &str = "8fceb735082b5a529312040b58ea780b";
 const SIGN_SECRET: &str = "c640ca392cd45fb3a55b00a63a86c618";
 
 pub struct VenueSession<'a> {
-    pub(crate) client: &'a Client,
+    pub(crate) client: &'a common::Client,
     pub(crate) authorization: Option<String>,
 }
 
 /// 通过统一认证建立体育场馆业务站点 session。
-pub async fn prepare_session(client: &Client) -> Result<VenueSession<'_>> {
+pub async fn prepare_session(client: &common::Client) -> Result<VenueSession<'_>> {
     let response = client
         .get(SSO_LOGIN_URL)
         .send()
@@ -152,7 +151,7 @@ pub(crate) async fn post_form_api_typed<T: Serialize + ?Sized, R: DeserializeOwn
 }
 
 async fn post_form_api_raw<T: Serialize + ?Sized>(
-    client: &Client,
+    client: &common::Client,
     authorization: Option<&str>,
     path: &str,
     form: &T,
@@ -162,7 +161,7 @@ async fn post_form_api_raw<T: Serialize + ?Sized>(
 }
 
 async fn post_form_api_raw_typed<T: Serialize + ?Sized, R: DeserializeOwned + Default>(
-    client: &Client,
+    client: &common::Client,
     authorization: Option<&str>,
     path: &str,
     form: &T,

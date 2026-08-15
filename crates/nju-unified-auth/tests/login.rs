@@ -9,6 +9,7 @@ async fn logs_in_with_secret_credentials() -> Result<()> {
     let password = secret_value(&secret, "NJU_PASSWORD").context("NJU_PASSWORD is missing")?;
 
     let castgc = nju_unified_auth::login(username, password).await?;
+    println!("CASTGC: {}", castgc);
 
     assert!(!castgc.trim().is_empty());
 

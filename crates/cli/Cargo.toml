@@ -18,6 +18,7 @@ exchange-system = { path = "../exchange-system" }
 graduate-admission = { path = "../graduate-admission" }
 itsc = { path = "../itsc" }
 nju-unified-auth = { path = "../nju-unified-auth" }
+nju-web-vpn = { path = "../nju-web-vpn" }
 scit = { path = "../scit" }
 venue = { path = "../venue" }
 youth-league = { path = "../youth-league" }
@@ -25,9 +26,12 @@ base64 = "0.22"
 clap = { version = "4", features = ["derive"] }
 ddddocr = { package = "ddddocr-tract", version = "0.1", default-features = false }
 my-workspace-hack = { version = "0.1", path = "../my-workspace-hack" }
+percent-encoding = "2"
 platform-dirs = "0.3"
 reqwest = { workspace = true, features = ["cookies", "json"] }
 sanitize-filename = "0.6"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }

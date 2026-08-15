@@ -38,7 +38,7 @@ pub fn default_role_id() -> &'static str {
 /// 有多角色选择页，单独访问 `appShow` 会停在 `select_role.html`，直接访问接口会 302；
 /// 直接访问应用 index 也会缺少应用授权而 403。因此这里先访问应用入口和带 `_roleId`
 /// 的应用页建立 ehall/ehallapp 会话，再调用 `changeAppRole` 选择本科学生组角色。
-pub async fn prepare_session(client: &reqwest::Client, role_id: &str) -> Result<()> {
+pub async fn prepare_session(client: &common::Client, role_id: &str) -> Result<()> {
     client
         .get(APP_SHOW_URL)
         .query(&[("appId", APP_ID)])
@@ -204,7 +204,7 @@ struct EhallEnvelope<T> {
 }
 
 pub async fn list_training_programs(
-    client: &reqwest::Client,
+    client: &common::Client,
     options: &TrainingProgramListOptions,
 ) -> Result<EhallPage<TrainingProgram>> {
     let page_number = options.page_number.max(1);
@@ -223,7 +223,7 @@ pub async fn list_training_programs(
 }
 
 pub async fn list_all_training_programs(
-    client: &reqwest::Client,
+    client: &common::Client,
     options: &TrainingProgramListOptions,
 ) -> Result<Vec<TrainingProgram>> {
     let mut page_options = options.clone();
@@ -245,7 +245,7 @@ pub async fn list_all_training_programs(
 }
 
 pub async fn get_training_program_detail(
-    client: &reqwest::Client,
+    client: &common::Client,
     program_id: &str,
 ) -> Result<TrainingProgram> {
     let form = vec![
@@ -263,7 +263,7 @@ pub async fn get_training_program_detail(
 }
 
 pub async fn list_training_program_nodes(
-    client: &reqwest::Client,
+    client: &common::Client,
     program_id: &str,
 ) -> Result<Vec<TrainingProgramNode>> {
     let form = vec![("PYFADM".to_string(), program_id.to_string())];
@@ -274,7 +274,7 @@ pub async fn list_training_program_nodes(
 }
 
 pub async fn get_training_program_node_detail(
-    client: &reqwest::Client,
+    client: &common::Client,
     program_id: &str,
     node_id: &str,
 ) -> Result<TrainingProgramNode> {
@@ -293,7 +293,7 @@ pub async fn get_training_program_node_detail(
 }
 
 pub async fn list_node_courses(
-    client: &reqwest::Client,
+    client: &common::Client,
     program_id: &str,
     node_id: &str,
     page_number: u64,
@@ -311,7 +311,7 @@ pub async fn list_node_courses(
 }
 
 pub async fn list_all_node_courses(
-    client: &reqwest::Client,
+    client: &common::Client,
     program_id: &str,
     node_id: &str,
 ) -> Result<Vec<TrainingProgramCourse>> {
@@ -389,7 +389,7 @@ fn non_empty(value: Option<&str>) -> Option<&str> {
 }
 
 async fn post_page<T>(
-    client: &reqwest::Client,
+    client: &common::Client,
     url: &str,
     form: &[(String, String)],
     action: &str,

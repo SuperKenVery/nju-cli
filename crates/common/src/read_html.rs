@@ -8,7 +8,7 @@ use std::sync::LazyLock;
 pub fn html_to_markdown(html: &str) -> Result<String> {
     let result = convert(html, None).context("failed to convert HTML to Markdown")?;
 
-    Ok(result.content.context("No content in converted markdown")?)
+    result.content.context("No content in converted markdown")
 }
 
 /// 将 HTML 文本转换为 Markdown，并使用 `base_url` 补全 Markdown 链接中的相对 URL。
@@ -20,7 +20,7 @@ pub fn html_to_markdown_with_base_url(html: &str, base_url: &str) -> Result<Stri
 }
 
 /// 使用调用方提供的 HTTP client 读取 HTML 页面，并转换为 Markdown。
-pub async fn read_html_page(client: &reqwest::Client, url: &str) -> Result<String> {
+pub async fn read_html_page(client: &crate::Client, url: &str) -> Result<String> {
     let response = client
         .get(url)
         .send()

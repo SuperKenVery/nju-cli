@@ -10,8 +10,6 @@ use ddddocr::BBox;
 use serde::Serialize;
 use serde_json::Value;
 
-use crate::auth;
-
 #[derive(Debug, Subcommand)]
 pub enum VenueCommand {
     /// 列出前台展示的场馆和可预约项目。
@@ -296,9 +294,8 @@ pub struct CancelOptions {
     remark: String,
 }
 
-pub async fn handle(command: VenueCommand) -> Result<()> {
-    let client = auth::authenticated_client().await?;
-    let session = venue::prepare_session(&client)
+pub async fn handle(command: VenueCommand, client: &common::Client) -> Result<()> {
+    let session = venue::prepare_session(client)
         .await
         .context("failed to prepare venue session; try running `nju-cli login` again")?;
 

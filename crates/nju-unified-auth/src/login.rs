@@ -1,8 +1,11 @@
+use std::sync::Arc;
+
 use anyhow::{Context, Result, anyhow};
 use reqwest::{
-    Client, Response,
+    Client,
     header::{self, HeaderMap, HeaderValue},
 };
+use reqwest_cookie_store::CookieStoreMutex;
 
 use crate::{captcha::verify_slider_captcha, request, utils};
 
@@ -14,15 +17,48 @@ const USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleW
 /// 登录流程会使用内部 client 复用 cookie 并禁用自动重定向，以便从登录响应中读取
 /// CASTGC。滑块验证码会自动识别，并在识别失败时更换验证码重试。
 pub async fn login(username: impl Into<String>, password: impl AsRef<str>) -> Result<String> {
-    let client = build_login_client()?;
+    let (_logged_in_client, _cookie_store, castgc_cookie) =
+        build_logged_in_client(username, password).await?;
+
+    Ok(castgc_cookie)
+}
+
+/// Build a reqwest client logged in to nju authserver.
+///
+/// Returns: (rqwest client, cookie store, CASTGC cookie value)
+async fn build_logged_in_client(
+    username: impl Into<String>,
+    password: impl AsRef<str>,
+) -> Result<(Client, Arc<CookieStoreMutex>, String)> {
+    let (client, cookie_store) = build_login_client_with_cookie_store()?;
     let login_page = request_login_page(&client).await?;
     let context = utils::extract_context(&login_page)?;
 
     verify_slider_captcha(&client).await?;
-    submit_login(&client, context, username.into(), password.as_ref()).await
+    let login_response = submit_login(&client, context, username.into(), password.as_ref()).await?;
+
+    let query_castgc = {
+        let unlocked_cookie_store = cookie_store
+            .lock()
+            .map_err(|_| anyhow!("NJU auth cookie store lock is poisoned while testing log in"))?;
+
+        unlocked_cookie_store
+            .get("authserver.nju.edu.cn", "/authserver", "CASTGC")
+            .map(|cookie| cookie.value().to_string())
+    };
+
+    match query_castgc {
+        Some(castgc) => Ok((client, cookie_store, castgc)),
+        None => {
+            let page = login_response.text().await?;
+            let err = utils::extract_login_error(&page)
+                .unwrap_or_else(|| format!("Failed to find err msg, raw page: {}", page));
+            Err(anyhow!("Failed to login to NJU authserver: {}", err))
+        }
+    }
 }
 
-fn build_login_client() -> Result<Client> {
+fn build_login_client_with_cookie_store() -> Result<(Client, Arc<CookieStoreMutex>)> {
     let mut headers = HeaderMap::new();
     headers.insert(header::USER_AGENT, HeaderValue::from_static(USER_AGENT));
     headers.insert(
@@ -31,12 +67,14 @@ fn build_login_client() -> Result<Client> {
     );
     headers.insert(header::REFERER, HeaderValue::from_static(LOGIN_URL));
 
-    Client::builder()
-        .cookie_store(true)
-        .redirect(reqwest::redirect::Policy::none())
+    let cookie_provider = Arc::new(CookieStoreMutex::default());
+    let client = Client::builder()
+        .cookie_provider(cookie_provider.clone())
         .default_headers(headers)
         .build()
-        .context("failed to build NJU auth login client")
+        .context("failed to build NJU auth login client")?;
+
+    Ok((client, cookie_provider))
 }
 
 async fn request_login_page(client: &Client) -> Result<String> {
@@ -48,7 +86,7 @@ async fn submit_login(
     mut context: std::collections::HashMap<String, String>,
     username: String,
     password: &str,
-) -> Result<String> {
+) -> Result<reqwest::Response> {
     let salt = context
         .remove("pwdEncryptSalt")
         .context("failed to find password encryption salt")?;
@@ -67,19 +105,5 @@ async fn submit_login(
     )
     .await?;
 
-    extract_castgc(response).await
-}
-
-async fn extract_castgc(response: Response) -> Result<String> {
-    if let Some(cookie) = response.cookies().find(|cookie| cookie.name() == "CASTGC") {
-        return Ok(cookie.value().to_string());
-    }
-
-    let html = response
-        .text()
-        .await
-        .context("failed to read NJU auth login failure page")?;
-    Err(anyhow!(utils::extract_login_error(&html).unwrap_or_else(
-        || { "NJU auth login failed, but no error message was found".to_string() }
-    )))
+    Ok(response)
 }

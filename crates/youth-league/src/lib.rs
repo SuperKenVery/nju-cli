@@ -53,7 +53,7 @@ pub struct Article {
 }
 
 pub async fn get_articles(
-    client: &reqwest::Client,
+    client: &common::Client,
     section: ArticleSection,
     page_index: u64,
 ) -> Result<ArticlePage> {
@@ -79,7 +79,7 @@ pub async fn get_articles(
     parse_article_list(section, page_index, page_url.as_str(), &html)
 }
 
-pub async fn read_article(client: &reqwest::Client, url: &str) -> Result<String> {
+pub async fn read_article(client: &common::Client, url: &str) -> Result<String> {
     let url = reqwest::Url::parse(SITE_BASE_URL)
         .context("invalid youth league site base URL")?
         .join(url)

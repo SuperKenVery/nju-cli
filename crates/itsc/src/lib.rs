@@ -5,6 +5,8 @@ use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 
 const SITE_BASE_URL: &str = "https://itsc.nju.edu.cn/";
+const SITE_HOST: &str = "itsc.nju.edu.cn";
+const WEB_VPN_SITE_HOST: &str = "itsc-nju-edu-cn.atrust.nju.edu.cn";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -56,7 +58,7 @@ pub struct Page {
 /// `recursive` 为 true 时，会从栏目页继续抓取同域名下的栏目页和文章页，适合
 /// 正版软件这种正文里链接到大量子教程的页面。
 pub async fn list_pages(
-    client: &reqwest::Client,
+    client: &common::Client,
     section: Section,
     recursive: bool,
     max_pages: usize,
@@ -118,7 +120,7 @@ pub async fn list_pages(
 }
 
 /// 读取 ITSC 页面正文并转换为 Markdown。
-pub async fn read_page(client: &reqwest::Client, url: &str) -> Result<String> {
+pub async fn read_page(client: &common::Client, url: &str) -> Result<String> {
     let url = reqwest::Url::parse(SITE_BASE_URL)
         .context("invalid ITSC site base URL")?
         .join(url)
@@ -265,7 +267,7 @@ fn id_from_page_url(url: &reqwest::Url) -> Option<u64> {
 }
 
 fn is_itsc_content_url(url: &reqwest::Url) -> bool {
-    if url.host_str() != Some("itsc.nju.edu.cn") {
+    if !matches!(url.host_str(), Some(SITE_HOST | WEB_VPN_SITE_HOST)) {
         return false;
     }
 
@@ -274,8 +276,6 @@ fn is_itsc_content_url(url: &reqwest::Url) -> bool {
 }
 
 fn normalize_url(mut url: reqwest::Url) -> reqwest::Url {
-    let _ = url.set_scheme("https");
-    let _ = url.set_host(Some("itsc.nju.edu.cn"));
     url.set_fragment(None);
     url
 }
@@ -328,5 +328,37 @@ mod tests {
 
         assert_eq!(links.len(), 1);
         assert_eq!(links[0].as_str(), "https://itsc.nju.edu.cn/Office/list.htm");
+    }
+
+    #[test]
+    fn follows_content_subpages_from_web_vpn_response() {
+        let document = Html::parse_document(
+            r#"<div class="wp_articlecontent"><a href="/Office/list.htm">Office</a></div>"#,
+        );
+        let links = extract_follow_links(
+            &document,
+            "https://itsc-nju-edu-cn.atrust.nju.edu.cn/zbrj/list.htm",
+            true,
+        )
+        .unwrap();
+
+        assert_eq!(links.len(), 1);
+        assert_eq!(
+            links[0].as_str(),
+            "https://itsc-nju-edu-cn.atrust.nju.edu.cn/Office/list.htm"
+        );
+    }
+
+    #[test]
+    fn normalizes_only_the_fragment() {
+        let url = reqwest::Url::parse(
+            "http://itsc-nju-edu-cn.atrust.nju.edu.cn/Office/list.htm?q=1#section",
+        )
+        .unwrap();
+
+        assert_eq!(
+            normalize_url(url).as_str(),
+            "http://itsc-nju-edu-cn.atrust.nju.edu.cn/Office/list.htm?q=1"
+        );
     }
 }

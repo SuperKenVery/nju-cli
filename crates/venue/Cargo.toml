@@ -8,6 +8,7 @@ aes = "0.8"
 anyhow = "1"
 base64 = "0.22"
 cbc = { version = "0.1", features = ["alloc"] }
+common = { path = "../common" }
 md5 = "0.7"
 reqwest = { workspace = true, features = ["json"] }
 serde = { version = "1", features = ["derive"] }

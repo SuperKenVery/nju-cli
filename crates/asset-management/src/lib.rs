@@ -227,7 +227,7 @@ struct EncodedArticleQuery {
 }
 
 pub async fn get_articles(
-    client: &reqwest::Client,
+    client: &common::Client,
     section: ArticleSection,
     page_index: u64,
 ) -> Result<ArticlePage> {
@@ -280,7 +280,7 @@ pub async fn get_articles(
 }
 
 pub async fn list_all_articles(
-    client: &reqwest::Client,
+    client: &common::Client,
     section: ArticleSection,
 ) -> Result<Vec<Article>> {
     let mut page_index = 1;
@@ -302,7 +302,7 @@ pub async fn list_all_articles(
     Ok(articles)
 }
 
-pub async fn read_article(client: &reqwest::Client, url: &str) -> Result<String> {
+pub async fn read_article(client: &common::Client, url: &str) -> Result<String> {
     let url = normalize_site_url(url)?;
     let response = client
         .get(url.clone())
@@ -321,7 +321,7 @@ pub async fn read_article(client: &reqwest::Client, url: &str) -> Result<String>
 }
 
 async fn fetch_api_articles(
-    client: &reqwest::Client,
+    client: &common::Client,
     channel_id: u64,
     page_index: u64,
     page_size: u64,

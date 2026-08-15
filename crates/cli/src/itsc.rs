@@ -60,7 +60,7 @@ struct CachedPage {
     kind: itsc::PageKind,
 }
 
-pub async fn handle(command: ItscCommand, client: &reqwest::Client) -> Result<()> {
+pub async fn handle(command: ItscCommand, client: &common::Client) -> Result<()> {
     match command {
         ItscCommand::List {
             section,

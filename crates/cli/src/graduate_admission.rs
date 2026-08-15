@@ -117,7 +117,7 @@ struct CachedArticle {
     publish_time: String,
 }
 
-pub async fn handle(command: GraduateAdmissionCommand, client: &reqwest::Client) -> Result<()> {
+pub async fn handle(command: GraduateAdmissionCommand, client: &common::Client) -> Result<()> {
     match command {
         GraduateAdmissionCommand::Columns => print_columns(),
         GraduateAdmissionCommand::List { section, page, all } => {
@@ -187,7 +187,7 @@ fn print_columns() {
 }
 
 async fn list_articles(
-    client: &reqwest::Client,
+    client: &common::Client,
     section: graduate_admission::ArticleSection,
     page: u64,
     all: bool,
@@ -204,7 +204,7 @@ async fn list_articles(
 }
 
 async fn articles_to_download(
-    client: &reqwest::Client,
+    client: &common::Client,
     section: graduate_admission::ArticleSection,
     article_ids: Vec<u64>,
     all: bool,
@@ -242,7 +242,7 @@ async fn articles_to_download(
 }
 
 async fn download_article(
-    client: &reqwest::Client,
+    client: &common::Client,
     article: &CachedArticle,
     dir: &std::path::Path,
 ) -> Result<()> {

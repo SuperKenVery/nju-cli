@@ -7,8 +7,6 @@ use anyhow::{Context, Result, anyhow};
 use clap::{Args, Subcommand};
 use serde_json::Value;
 
-use crate::auth;
-
 #[derive(Debug, Subcommand)]
 pub enum EhallCommand {
     /// 本科人才培养方案查询。
@@ -411,51 +409,49 @@ pub struct CourseScheduleQueryOptions {
     filters: Vec<String>,
 }
 
-pub async fn handle(command: EhallCommand) -> Result<()> {
-    let client = auth::authenticated_client().await?;
-
+pub async fn handle(command: EhallCommand, client: &common::Client) -> Result<()> {
     match command {
         EhallCommand::TrainingProgram { command } => {
             ehall::training_program::prepare_session(
-                &client,
+                client,
                 ehall::training_program::default_role_id(),
             )
             .await
             .context("failed to prepare ehall training program session; try running `nju-cli login` again")?;
-            handle_training_program(command, &client).await
+            handle_training_program(command, client).await
         }
         EhallCommand::CourseSchedule { command } => {
             ehall::course_schedule::prepare_session(
-                &client,
+                client,
                 ehall::course_schedule::default_role_id(),
             )
             .await
             .context("failed to prepare ehall course schedule session; try running `nju-cli login` again")?;
-            handle_course_schedule(command, &client).await
+            handle_course_schedule(command, client).await
         }
         EhallCommand::MyCourseSchedule { command } => {
             ehall::my_course_schedule::prepare_schedule_session(
-                &client,
+                client,
                 ehall::my_course_schedule::default_role_id(),
             )
             .await
             .context("failed to prepare ehall my course schedule session; try running `nju-cli login` again")?;
-            handle_my_course_schedule(command, &client).await
+            handle_my_course_schedule(command, client).await
         }
         EhallCommand::Grades { command } => {
-            ehall::grade_query::prepare_session(&client, ehall::grade_query::default_role_id())
+            ehall::grade_query::prepare_session(client, ehall::grade_query::default_role_id())
                 .await
                 .context(
                     "failed to prepare ehall grade query session; try running `nju-cli login` again",
                 )?;
-            handle_grades(command, &client).await
+            handle_grades(command, client).await
         }
     }
 }
 
 async fn handle_training_program(
     command: TrainingProgramCommand,
-    client: &reqwest::Client,
+    client: &common::Client,
 ) -> Result<()> {
     match command {
         TrainingProgramCommand::List(options) => {
@@ -578,7 +574,7 @@ async fn handle_training_program(
 
 async fn handle_course_schedule(
     command: CourseScheduleCommand,
-    client: &reqwest::Client,
+    client: &common::Client,
 ) -> Result<()> {
     match command {
         CourseScheduleCommand::List(options) => {
@@ -640,7 +636,7 @@ async fn handle_course_schedule(
 
 async fn handle_my_course_schedule(
     command: MyCourseScheduleCommand,
-    client: &reqwest::Client,
+    client: &common::Client,
 ) -> Result<()> {
     match command {
         MyCourseScheduleCommand::Terms { json } => {
@@ -797,7 +793,7 @@ async fn handle_my_course_schedule(
     Ok(())
 }
 
-async fn handle_grades(command: GradeCommand, client: &reqwest::Client) -> Result<()> {
+async fn handle_grades(command: GradeCommand, client: &common::Client) -> Result<()> {
     match command {
         GradeCommand::Terms { json } => {
             let terms = ehall::grade_query::list_recent_terms(client)
