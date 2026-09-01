@@ -16,6 +16,7 @@ common = { path = "../common" }
 ehall = { path = "../ehall" }
 exchange-system = { path = "../exchange-system" }
 graduate-admission = { path = "../graduate-admission" }
+graduate-school = { path = "../graduate-school" }
 itsc = { path = "../itsc" }
 nju-unified-auth = { path = "../nju-unified-auth" }
 nju-web-vpn = { path = "../nju-web-vpn" }

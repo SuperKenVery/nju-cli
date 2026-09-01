@@ -478,6 +478,7 @@ dependencies = [
  "ehall",
  "exchange-system",
  "graduate-admission",
+ "graduate-school",
  "itsc",
  "my-workspace-hack",
  "nju-unified-auth",
@@ -1118,6 +1119,17 @@ dependencies = [
  "scraper",
  "serde",
  "tokio",
+]
+
+[[package]]
+name = "graduate-school"
+version = "1.2.0"
+dependencies = [
+ "anyhow",
+ "common",
+ "reqwest",
+ "scraper",
+ "serde",
 ]
 
 [[package]]
