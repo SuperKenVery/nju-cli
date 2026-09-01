@@ -9,6 +9,7 @@ mod download;
 mod ehall;
 mod exchange_system;
 mod graduate_admission;
+mod graduate_school;
 mod itsc;
 mod scit;
 mod venue;
@@ -68,6 +69,12 @@ enum Command {
     GraduateAdmission {
         #[command(subcommand)]
         command: graduate_admission::GraduateAdmissionCommand,
+    },
+    /// 研究生院：通知、办事指南、培养、学位、导师、学籍和奖助管理。
+    #[command(name = "graduate-school")]
+    GraduateSchool {
+        #[command(subcommand)]
+        command: graduate_school::GraduateSchoolCommand,
     },
     /// 南大团委最新动态和公告通知。
     #[command(name = "youth-league")]
@@ -141,6 +148,10 @@ async fn main() -> Result<()> {
         Command::GraduateAdmission { command } => {
             let client = auth::get_client(direct_mode).await?;
             graduate_admission::handle(command, &client).await?
+        }
+        Command::GraduateSchool { command } => {
+            let client = auth::get_client(direct_mode).await?;
+            graduate_school::handle(command, &client).await?
         }
         Command::YouthLeague { command } => {
             let client = auth::get_client(direct_mode).await?;
