@@ -15,6 +15,13 @@ pub enum EhallCommand {
         #[command(subcommand)]
         command: TrainingProgramCommand,
     },
+    /// 查看当前用户的研究生培养方案。
+    #[command(name = "graduate-training-program")]
+    GraduateTrainingProgram {
+        /// 输出完整 JSON。
+        #[arg(long)]
+        json: bool,
+    },
     /// 本科全校课表查询。
     #[command(name = "all-undergraduate-courses")]
     CourseSchedule {
@@ -420,6 +427,22 @@ pub async fn handle(command: EhallCommand, client: &common::Client) -> Result<()
             .context("failed to prepare ehall training program session; try running `nju-cli login` again")?;
             handle_training_program(command, client).await
         }
+        EhallCommand::GraduateTrainingProgram { json } => {
+            ehall::graduate_training_program::prepare_session(client)
+                .await
+                .context("failed to prepare ehall graduate training program session; try running `nju-cli login` again")?;
+            let program = ehall::graduate_training_program::get_my_training_program(client)
+                .await
+                .context("failed to get my graduate training program")?;
+
+            if json {
+                println!("{}", serde_json::to_string_pretty(&program)?);
+            } else {
+                print_graduate_training_program(&program);
+            }
+
+            Ok(())
+        }
         EhallCommand::CourseSchedule { command } => {
             ehall::course_schedule::prepare_session(
                 client,
@@ -570,6 +593,132 @@ async fn handle_training_program(
     }
 
     Ok(())
+}
+
+fn print_graduate_training_program(
+    program: &ehall::graduate_training_program::GraduateTrainingProgram,
+) {
+    let summary = &program.summary;
+    println!("{} {}", summary.id, summary.name);
+    print_optional_line("年级", summary.grade_name.as_deref());
+    print_optional_line("院系", summary.department_name.as_deref());
+    print_optional_line("专业", summary.major_name.as_deref());
+    print_optional_line("一级学科", summary.discipline_name.as_deref());
+    print_optional_line("方案类型", summary.program_type_name.as_deref());
+    print_optional_line("适用学生类别", summary.applicable_student_types.as_deref());
+    print_optional_value_line("最低总学分", summary.minimum_credits.as_ref());
+
+    for section in &program.sections {
+        println!();
+        println!("{}", section.name);
+
+        match graduate_training_program_section_type(section.section_type.as_ref()) {
+            Some(2) => {
+                print_graduate_training_program_credit_requirements(&program.credit_requirements)
+            }
+            Some(3) => print_graduate_training_program_courses(&program.courses),
+            _ => {
+                if let Some(content) = section
+                    .content
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                {
+                    println!("{content}");
+                } else if let Some(description) = section
+                    .description
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                {
+                    println!("{description}");
+                }
+            }
+        }
+    }
+}
+
+fn graduate_training_program_section_type(value: Option<&Value>) -> Option<i64> {
+    value.and_then(|value| {
+        value
+            .as_i64()
+            .or_else(|| value.as_str().and_then(|value| value.parse().ok()))
+    })
+}
+
+fn print_graduate_training_program_courses(
+    courses: &[ehall::graduate_training_program::GraduateTrainingProgramCourse],
+) {
+    println!("课程类别\t课程代码\t课程\t学院\t学时\t学分\t学期\t是否必修\t备注\t多选组");
+    for course in courses {
+        let hours = course
+            .hours
+            .as_ref()
+            .and_then(display_value)
+            .unwrap_or_default();
+        let credits = course
+            .credits
+            .as_ref()
+            .and_then(display_value)
+            .unwrap_or_default();
+        let values = [
+            course.category_name.as_deref().unwrap_or_default(),
+            course.id.as_str(),
+            course.name.as_str(),
+            course.department_name.as_deref().unwrap_or_default(),
+            hours.as_str(),
+            credits.as_str(),
+            course.term_name.as_deref().unwrap_or_default(),
+            course.required_name.as_deref().unwrap_or_default(),
+            course.remark.as_deref().unwrap_or_default(),
+            course.multiple_choice_group.as_deref().unwrap_or_default(),
+        ];
+        println!(
+            "{}",
+            values
+                .into_iter()
+                .map(escape_tsv_value)
+                .collect::<Vec<_>>()
+                .join("\t")
+        );
+    }
+}
+
+fn print_graduate_training_program_credit_requirements(
+    requirements: &ehall::graduate_training_program::GraduateTrainingProgramCreditRequirements,
+) {
+    let group_minimums = requirements
+        .groups
+        .iter()
+        .filter_map(|group| {
+            group
+                .minimum_credits
+                .as_ref()
+                .and_then(display_value)
+                .map(|credits| (group.id.as_str(), credits))
+        })
+        .collect::<HashMap<_, _>>();
+
+    println!("课程类别\t最低学分\t合并组最低学分");
+    for category in &requirements.categories {
+        let minimum_credits = category
+            .minimum_credits
+            .as_ref()
+            .and_then(display_value)
+            .unwrap_or_default();
+        let group_minimum = category
+            .group_id
+            .as_deref()
+            .and_then(|group_id| group_minimums.get(group_id))
+            .map(String::as_str)
+            .unwrap_or_default();
+        println!(
+            "{}\t{}\t{}",
+            escape_tsv_value(category.category_name.as_deref().unwrap_or_default()),
+            escape_tsv_value(&minimum_credits),
+            escape_tsv_value(group_minimum),
+        );
+    }
 }
 
 async fn handle_course_schedule(
