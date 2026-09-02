@@ -162,6 +162,22 @@ jobs:
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             release_tag="${GITHUB_REF_NAME}"
+            previous_tag=""
+            nearest_distance=""
+
+            while IFS= read -r candidate; do
+              if [ "${candidate}" == "${release_tag}" ] ||
+                ! [[ "${candidate}" =~ ^v[0-9]+(\.[0-9]+)*$ ]] ||
+                ! git merge-base --is-ancestor "${candidate}" "${GITHUB_SHA}"; then
+                continue
+              fi
+
+              distance="$(git rev-list --count "${candidate}..${GITHUB_SHA}")"
+              if [ -z "${nearest_distance}" ] || [ "${distance}" -lt "${nearest_distance}" ]; then
+                previous_tag="${candidate}"
+                nearest_distance="${distance}"
+              fi
+            done < <(git tag --list 'v[0-9]*')
           else
             base_tag=""
             while IFS= read -r candidate; do
@@ -178,10 +194,28 @@ jobs:
 
             short_sha="$(git rev-parse --short=5 "${GITHUB_SHA}")"
             release_tag="${base_tag}-${short_sha}"
+            previous_tag="${base_tag}"
+            nearest_distance=""
+
+            while IFS= read -r candidate; do
+              if [ "${candidate}" == "${release_tag}" ] ||
+                ! [[ "${candidate}" =~ ^v[0-9]+(\.[0-9]+)*-[0-9a-fA-F]{5,}$ ]] ||
+                ! git merge-base --is-ancestor "${candidate}" "${GITHUB_SHA}"; then
+                continue
+              fi
+
+              distance="$(git rev-list --count "${candidate}..${GITHUB_SHA}")"
+              if [ -z "${nearest_distance}" ] || [ "${distance}" -lt "${nearest_distance}" ]; then
+                previous_tag="${candidate}"
+                nearest_distance="${distance}"
+              fi
+            done < <(git tag --list "${base_tag}-*")
           fi
 
           echo "tag=${release_tag}" >> "${GITHUB_OUTPUT}"
+          echo "previous_tag=${previous_tag}" >> "${GITHUB_OUTPUT}"
           echo "Release version: ${release_tag}"
+          echo "Release notes compare tag: ${previous_tag:-<none>}"
 
       - uses: actions/download-artifact@v7
         with:
@@ -195,7 +229,8 @@ jobs:
           tag_name: ${{ steps.release-version.outputs.tag }}
           target_commitish: ${{ github.sha }}
           name: ${{ steps.release-version.outputs.tag }}
-          body: Automated nju-cli release.
+          generate_release_notes: true
+          previous_tag: ${{ steps.release-version.outputs.previous_tag }}
           prerelease: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Sync binaries into Codex marketplace
