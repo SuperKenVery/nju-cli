@@ -3,6 +3,8 @@ name: Release
 on:
   pull_request:
   push:
+    branches:
+      - main
     tags:
       - "v*"
   workflow_dispatch:
@@ -143,11 +145,44 @@ jobs:
       - build-windows
       - package-skills
     runs-on: blacksmith-2vcpu-ubuntu-2404
-    if: startsWith(github.ref, 'refs/tags/')
+    if: >-
+      startsWith(github.ref, 'refs/tags/') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     permissions:
       contents: write
 
     steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release version
+        id: release-version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            release_tag="${GITHUB_REF_NAME}"
+          else
+            base_tag=""
+            while IFS= read -r candidate; do
+              if [[ "${candidate}" =~ ^v[0-9]+(\.[0-9]+)*$ ]]; then
+                base_tag="${candidate}"
+                break
+              fi
+            done < <(git tag --list 'v[0-9]*' --sort=-version:refname)
+
+            if [ -z "${base_tag}" ]; then
+              echo "No stable version tag (for example v1.7.2) was found." >&2
+              exit 1
+            fi
+
+            short_sha="$(git rev-parse --short=5 "${GITHUB_SHA}")"
+            release_tag="${base_tag}-${short_sha}"
+          fi
+
+          echo "tag=${release_tag}" >> "${GITHUB_OUTPUT}"
+          echo "Release version: ${release_tag}"
+
       - uses: actions/download-artifact@v7
         with:
           path: dist
@@ -157,12 +192,16 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*
-          name: ${{ github.ref_name }}
+          tag_name: ${{ steps.release-version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ steps.release-version.outputs.tag }}
           body: Automated nju-cli release.
+          prerelease: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Sync binaries into Codex marketplace
         env:
           GH_TOKEN: ${{ secrets.MARKETPLACE_SYNC_TOKEN }}
+          RELEASE_TAG: ${{ steps.release-version.outputs.tag }}
         run: |
           if [ -z "${GH_TOKEN}" ]; then
             echo "MARKETPLACE_SYNC_TOKEN is not set; skip marketplace sync trigger."
@@ -171,11 +210,12 @@ jobs:
           gh workflow run sync-cli-binaries.yml \
             --repo nju-cli/codex-marketplace \
             --ref main \
-            -f release_tag="${GITHUB_REF_NAME}"
+            -f release_tag="${RELEASE_TAG}"
 
       - name: Sync binaries into Claude Cowork marketplace
         env:
           GH_TOKEN: ${{ secrets.MARKETPLACE_SYNC_TOKEN }}
+          RELEASE_TAG: ${{ steps.release-version.outputs.tag }}
         run: |
           if [ -z "${GH_TOKEN}" ]; then
             echo "MARKETPLACE_SYNC_TOKEN is not set; skip Claude marketplace sync trigger."
@@ -184,11 +224,12 @@ jobs:
           gh workflow run sync-cli-binaries.yml \
             --repo nju-cli/claude-marketplace \
             --ref main \
-            -f release_tag="${GITHUB_REF_NAME}"
+            -f release_tag="${RELEASE_TAG}"
 
       - name: Sync binaries into OpenCode npm package
         env:
           GH_TOKEN: ${{ secrets.MARKETPLACE_SYNC_TOKEN }}
+          RELEASE_TAG: ${{ steps.release-version.outputs.tag }}
         run: |
           if [ -z "${GH_TOKEN}" ]; then
             echo "MARKETPLACE_SYNC_TOKEN is not set; skip OpenCode package sync trigger."
@@ -197,4 +238,4 @@ jobs:
           gh workflow run sync-cli-binaries.yml \
             --repo nju-cli/opencode-nju-cli \
             --ref main \
-            -f release_tag="${GITHUB_REF_NAME}"
+            -f release_tag="${RELEASE_TAG}"
