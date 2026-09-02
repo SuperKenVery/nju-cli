@@ -11,15 +11,15 @@ description: 南京大学相关操作，比如教务通知、研究生培养与�
 
 优先使用 Codex plugin 内置的 `nju-cli` 二进制：
 
-- macOS/Linux: `scripts/nju-cli`
-- Windows: `scripts/nju-cli.ps1`
+- macOS/Linux: `../../scripts/nju-cli`
+- Windows: `../../scripts/nju-cli.ps1`
 
 如果当前安装没有内置二进制，再使用系统 PATH 中的 `nju-cli`。
 
 如果运行内置脚本时需要下载二进制，并且 GitHub Releases 下载慢或不可用，可以给脚本传下载镜像选项：
 
 ```bash
-scripts/nju-cli --download-mirror=nju <args>
+../../scripts/nju-cli --download-mirror=nju <args>
 ```
 
 当前可用下载镜像： `nju`
