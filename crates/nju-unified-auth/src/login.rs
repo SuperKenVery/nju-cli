@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result, anyhow};
 use reqwest::{
-    Client,
+    Client, StatusCode,
     header::{self, HeaderMap, HeaderValue},
 };
 use reqwest_cookie_store::CookieStoreMutex;
@@ -99,11 +99,19 @@ async fn submit_login(
     context.insert("captcha".to_string(), String::new());
     context.insert("dllt".to_string(), "mobileLogin".to_string());
 
-    let response = request::send(
-        client.post(LOGIN_URL).form(&context),
-        "submit NJU auth login form",
-    )
-    .await?;
+    let response = client
+        .post(LOGIN_URL)
+        .form(&context)
+        .send()
+        .await
+        .with_context(|| "failed to submit NJU auth login form")?;
 
-    Ok(response)
+    // 账号或密码错误时认证服务器会返回 401，直接给出明确的错误信息。
+    if response.status() == StatusCode::UNAUTHORIZED {
+        return Err(anyhow!("Password is wrong"));
+    }
+
+    response
+        .error_for_status()
+        .context("submit NJU auth login form returned an error status")
 }
